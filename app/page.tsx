@@ -79,7 +79,9 @@ export default function HomePage() {
         if (error) {
           setAuthError(error.message);
         } else {
-          setAuthError("Check your email for the confirmation link!");
+          setAuthError(
+            "Check your email for the confirmation link! (Check spam/junk folder if not in inbox)",
+          );
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirm Your Signup - The Control Room</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: #0a0a0a;
+        color: #ffffff;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #1a1a1a;
+        border: 1px solid #2a2a2a;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 20px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .content {
+        padding: 40px 30px;
+      }
+      .content h2 {
+        margin: 0 0 20px 0;
+        font-size: 24px;
+        font-weight: 600;
+        color: #ffffff;
+      }
+      .content p {
+        margin: 0 0 20px 0;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #b0b0b0;
+      }
+      .button-container {
+        text-align: center;
+        margin: 35px 0;
+      }
+      .confirm-button {
+        display: inline-block;
+        padding: 16px 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        transition: transform 0.2s;
+      }
+      .confirm-button:hover {
+        transform: translateY(-2px);
+      }
+      .alternative-link {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #0f0f0f;
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+      }
+      .alternative-link p {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #808080;
+      }
+      .alternative-link a {
+        color: #667eea;
+        word-break: break-all;
+        text-decoration: none;
+      }
+      .footer {
+        padding: 30px;
+        text-align: center;
+        border-top: 1px solid #2a2a2a;
+        background-color: #0f0f0f;
+      }
+      .footer p {
+        margin: 5px 0;
+        font-size: 14px;
+        color: #666666;
+      }
+      .footer a {
+        color: #667eea;
+        text-decoration: none;
+      }
+      .divider {
+        height: 1px;
+        background-color: #2a2a2a;
+        margin: 30px 0;
+      }
+      @media only screen and (max-width: 600px) {
+        .content {
+          padding: 30px 20px;
+        }
+        .header h1 {
+          font-size: 24px;
+        }
+        .content h2 {
+          font-size: 20px;
+        }
+        .confirm-button {
+          padding: 14px 30px;
+          font-size: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>🎮 The Control Room</h1>
+      </div>
+
+      <div class="content">
+        <h2>Welcome to The Control Room!</h2>
+
+        <p>
+          Thank you for signing up! We're excited to have you join our
+          community.
+        </p>
+
+        <p>
+          To get started and unlock all features, please confirm your email
+          address by clicking the button below:
+        </p>
+
+        <div class="button-container">
+          <a href="{{ .ConfirmationURL }}" class="confirm-button"
+            >Confirm Your Email</a
+          >
+        </div>
+
+        <div class="divider"></div>
+
+        <p>Once confirmed, you'll be able to:</p>
+        <ul style="color: #b0b0b0; line-height: 1.8; margin: 15px 0">
+          <li>Access your personal armory</li>
+          <li>Participate in gacha spins</li>
+          <li>Compete on the leaderboard</li>
+          <li>Connect with the community</li>
+        </ul>
+
+        <div class="alternative-link">
+          <p><strong>Button not working?</strong></p>
+          <p>Copy and paste this link into your browser:</p>
+          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <p style="font-size: 14px; color: #808080">
+          <strong>Note:</strong> This confirmation link will expire in 24 hours.
+          If you didn't create an account with The Control Room, you can safely
+          ignore this email.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p><strong>The Control Room</strong></p>
+        <p>Your ultimate gaming hub</p>
+        <p style="margin-top: 15px">
+          <a href="{{ .SiteURL }}">Visit Website</a> |
+          <a href="{{ .SiteURL }}/community">Community</a> |
+          <a href="{{ .SiteURL }}/support">Support</a>
+        </p>
+        <p style="margin-top: 20px; font-size: 12px">
+          © 2026 The Control Room. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
