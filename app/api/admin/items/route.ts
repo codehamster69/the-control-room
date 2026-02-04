@@ -1,26 +1,31 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { type NextRequest, NextResponse } from "next/server";
 
+// Valid rarities
+const VALID_RARITIES = [
+  "Mythic",
+  "Legendary",
+  "Epic",
+  "Rare",
+  "Uncommon",
+  "Common",
+];
+
 // GET - Fetch all items
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
-    // Check if user is authenticated and is admin
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
@@ -34,7 +39,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch items using admin client (bypasses RLS)
     const { data, error } = await adminSupabase
       .from("items")
       .select("*")
@@ -64,20 +68,15 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
-    // Check if user is authenticated and is admin
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
@@ -101,22 +100,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Capitalize rarity to match database constraint
-    const capitalizedRarity = rarity.charAt(0).toUpperCase() + rarity.slice(1).toLowerCase();
-    if (!['Common', 'Rare', 'Legendary'].includes(capitalizedRarity)) {
+    // Normalize rarity to match valid values
+    const normalizedRarity =
+      rarity.charAt(0).toUpperCase() + rarity.slice(1).toLowerCase();
+
+    if (!VALID_RARITIES.includes(normalizedRarity)) {
       return NextResponse.json(
-        { error: "Rarity must be Common, Rare, or Legendary" },
+        {
+          error: `Rarity must be one of: ${VALID_RARITIES.join(", ")}`,
+        },
         { status: 400 }
       );
     }
 
-    // Insert item using admin client (bypasses RLS)
     const { data, error } = await adminSupabase
       .from("items")
       .insert({
-        name,
-        rarity: capitalizedRarity,
-        score_value: parseInt(score_value),
+        name: String(name),
+        rarity: normalizedRarity,
+        score_value: parseInt(String(score_value)),
         image_url: image_url || null,
       })
       .select()
@@ -150,20 +152,15 @@ export async function PUT(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
-    // Check if user is authenticated and is admin
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
@@ -181,31 +178,42 @@ export async function PUT(request: NextRequest) {
     const { id, name, rarity, score_value, image_url } = body;
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Item ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
     }
 
-    // Capitalize rarity to match database constraint
-    const capitalizedRarity = rarity.charAt(0).toUpperCase() + rarity.slice(1).toLowerCase();
-    if (!['Common', 'Rare', 'Legendary'].includes(capitalizedRarity)) {
-      return NextResponse.json(
-        { error: "Rarity must be Common, Rare, or Legendary" },
-        { status: 400 }
-      );
+    // Build update object with explicit types
+    const updateData: { name?: string; rarity?: string; score_value?: number; image_url?: string | null } = {};
+
+    if (name !== undefined) {
+      updateData.name = String(name);
     }
 
-    // Update item using admin client (bypasses RLS)
+    if (rarity) {
+      const normalizedRarity =
+        rarity.charAt(0).toUpperCase() + rarity.slice(1).toLowerCase();
+      if (!VALID_RARITIES.includes(normalizedRarity)) {
+        return NextResponse.json(
+          {
+            error: `Rarity must be one of: ${VALID_RARITIES.join(", ")}`,
+          },
+          { status: 400 }
+        );
+      }
+      updateData.rarity = normalizedRarity;
+    }
+
+    if (score_value !== undefined) {
+      updateData.score_value = parseInt(String(score_value));
+    }
+
+    if (image_url !== undefined) {
+      updateData.image_url = image_url;
+    }
+
     const { data, error } = await adminSupabase
       .from("items")
-      .update({
-        name,
-        rarity: capitalizedRarity,
-        score_value: parseInt(score_value),
-        image_url: image_url || null,
-      })
-      .eq("id", id)
+      .update(updateData)
+      .eq("id", String(id))
       .select()
       .single();
 
@@ -237,20 +245,15 @@ export async function DELETE(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = await createAdminClient();
 
-    // Check if user is authenticated and is admin
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
@@ -268,17 +271,13 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Item ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
     }
 
-    // Delete item using admin client (bypasses RLS)
     const { error } = await adminSupabase
       .from("items")
       .delete()
-      .eq("id", id);
+      .eq("id", String(id));
 
     if (error) {
       console.error("Error deleting item:", error);

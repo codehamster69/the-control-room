@@ -260,13 +260,13 @@ export function LeaderboardView() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] p-4 md:p-6">
+    <div className="min-h-screen bg-[#050505] p-4 md:p-6 pb-32">
       <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
         <h1
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 10px #ff00ff, 0 0 20px #00ffff",
+            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
             fontSize: "1.25rem",
           }}
         >
@@ -320,7 +320,7 @@ export function LeaderboardView() {
         style={{
           borderColor: "#00ffff",
           backgroundColor: "rgba(0, 255, 255, 0.1)",
-          gridTemplateColumns: "60px 1fr 80px 80px 100px",
+          gridTemplateColumns: "50px 1fr 70px 70px 90px",
         }}
       >
         <div
@@ -376,7 +376,7 @@ export function LeaderboardView() {
       </div>
 
       {/* Table Body */}
-      <div className="overflow-x-auto">
+      <div>
         {displayedEntries.map((entry) => {
           const rank = getDisplayRank(entry);
           const isUser = isCurrentUser(entry);
@@ -385,7 +385,7 @@ export function LeaderboardView() {
               key={entry.user_id}
               className="grid gap-0 border-b border-gray-700 cursor-pointer hover:bg-[#1a1a2e] transition-colors"
               style={{
-                gridTemplateColumns: "60px 1fr 80px 80px 100px",
+                gridTemplateColumns: "50px 1fr 70px 70px 90px",
                 backgroundColor: isUser
                   ? "rgba(255, 200, 0, 0.08)"
                   : rank % 2 === 0
@@ -427,13 +427,16 @@ export function LeaderboardView() {
                     ?
                   </div>
                 )}
-                <div className="flex flex-col">
+                <div className="flex flex-col overflow-hidden">
                   <span
+                    className="truncate"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       color: isUser ? "#ffff00" : "#00ffff",
                       fontSize: "0.6rem",
+                      maxWidth: "100%",
                     }}
+                    title={`@${entry.username || "unknown"}`}
                   >
                     @{entry.username || "unknown"}
                   </span>
@@ -516,54 +519,39 @@ export function LeaderboardView() {
         </div>
       )}
 
-      {/* User Rank Summary */}
+      {/* User Rank Summary - Sleek Compact Version */}
       {userRank.entry && (
         <div
-          className="mt-6 pt-4 border-t-2"
-          style={{ borderColor: "#ff00ff" }}
+          className="fixed bottom-0 left-0 right-0 z-50"
+          style={{ backgroundColor: "rgba(5, 5, 5, 0.95)" }}
         >
           <div
-            className="p-4 rounded"
-            style={{ backgroundColor: "rgba(255, 0, 255, 0.1)" }}
+            className="mx-auto px-4 py-3 md:px-6 md:py-4"
+            style={{ maxWidth: "800px" }}
           >
-            <div className="flex justify-between items-center flex-wrap gap-4">
-              {/* Rank */}
-              <div className="flex items-center gap-3">
-                <span
-                  style={{
-                    fontFamily: "'Press Start 2P', cursive",
-                    color: "#ff00ff",
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  RANK
-                </span>
-                <div
-                  className="px-4 py-2 rounded font-bold"
-                  style={{
-                    fontFamily: "'Press Start 2P', cursive",
-                    backgroundColor: userRank.rank
-                      ? getRankColor(userRank.rank)
-                      : "#666",
-                    color: "#000",
-                    fontSize: "0.75rem",
-                  }}
-                >
-                  {userRank.rank ? `#${userRank.rank}` : "UNRANKED"}
-                </div>
-              </div>
-
-              {/* Player Info */}
-              <div className="flex items-center gap-3">
+            <div
+              className="grid items-center gap-3 md:gap-6 p-3 md:p-4 rounded-lg border-2"
+              style={{
+                borderColor: "#ff00ff",
+                backgroundColor: "rgba(255, 0, 255, 0.05)",
+                gridTemplateColumns: "auto 1fr auto",
+              }}
+            >
+              {/* Avatar & Username */}
+              <div className="flex items-center gap-2 md:gap-3">
                 {userRank.entry.avatar_url ? (
                   <img
                     src={userRank.entry.avatar_url}
                     alt=""
-                    className="w-10 h-10 rounded-full"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full"
+                    style={{
+                      border: "3px solid #ffff00",
+                      boxShadow: "0 0 10px rgba(255, 255, 0, 0.5)",
+                    }}
                   />
                 ) : (
                   <div
-                    className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-800 flex items-center justify-center"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       fontSize: "0.6rem",
@@ -575,50 +563,78 @@ export function LeaderboardView() {
                 )}
                 <div className="flex flex-col">
                   <span
+                    className="text-cyan-400 truncate max-w-[100px] md:max-w-[150px]"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
-                      color: "#00ffff",
-                      fontSize: "0.65rem",
+                      fontSize: "0.6rem",
                     }}
                   >
                     @{userRank.entry.username}
                   </span>
-                  <div className="flex gap-2 mt-1">
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px]"
-                      style={{
-                        fontFamily: "'Press Start 2P', cursive",
-                        backgroundColor: "#ff00ff",
-                        color: "#000",
-                      }}
-                    >
-                      CHAOS: {(userRank.entry.chaos_stat || 0).toFixed(1)}
-                    </span>
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px]"
-                      style={{
-                        fontFamily: "'Press Start 2P', cursive",
-                        backgroundColor: "#ff00ff",
-                        color: "#000",
-                      }}
-                    >
-                      SIMP: {(userRank.entry.simp_stat || 0).toFixed(1)}
-                    </span>
+                  <span
+                    className="text-yellow-500 text-[10px]"
+                    style={{ fontFamily: "'Press Start 2P', cursive" }}
+                  >
+                    YOU
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center justify-center gap-3 md:gap-6">
+                {/* Rank Badge */}
+                <div
+                  className="px-2 py-1 md:px-3 md:py-1 rounded font-bold text-center min-w-[60px]"
+                  style={{
+                    fontFamily: "'Press Start 2P', cursive",
+                    backgroundColor: userRank.rank
+                      ? getRankColor(userRank.rank)
+                      : "#333",
+                    color: "#000",
+                    fontSize: "0.55rem",
+                  }}
+                >
+                  {userRank.rank ? `#${userRank.rank}` : "UNRANKED"}
+                </div>
+
+                {/* Stats */}
+                <div className="flex gap-2 md:gap-3">
+                  <div
+                    className="px-2 py-1 rounded text-center"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      backgroundColor: "#ff00ff",
+                      color: "#000",
+                      fontSize: "0.5rem",
+                    }}
+                  >
+                    C: {(userRank.entry.chaos_stat || 0).toFixed(0)}
+                  </div>
+                  <div
+                    className="px-2 py-1 rounded text-center"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      backgroundColor: "#ff00ff",
+                      color: "#000",
+                      fontSize: "0.5rem",
+                    }}
+                  >
+                    S: {(userRank.entry.simp_stat || 0).toFixed(0)}
                   </div>
                 </div>
               </div>
 
               {/* Total Power */}
               <div
-                className="px-4 py-2 rounded font-bold"
+                className="px-3 py-1 md:px-4 md:py-2 rounded font-bold text-right"
                 style={{
                   fontFamily: "'Press Start 2P', cursive",
                   backgroundColor: "#ffff00",
                   color: "#000",
-                  fontSize: "0.7rem",
+                  fontSize: "0.6rem",
                 }}
               >
-                {Math.floor(userRank.entry.total_power || 0)} POWER
+                {Math.floor(userRank.entry.total_power || 0)} PWR
               </div>
             </div>
           </div>

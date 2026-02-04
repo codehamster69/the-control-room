@@ -224,9 +224,26 @@ export default function ProfilePage() {
           @{profile.instagram_username}
         </h1>
 
+        {/* Instagram Profile Link */}
+        {profile.instagram_username && (
+          <a
+            href={`https://instagram.com/${profile.instagram_username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1 text-xs mb-2 inline-block hover:opacity-80 transition-opacity"
+            style={{
+              fontFamily: "'Press Start 2P', cursive",
+              backgroundColor: "#E1306C",
+              color: "#ffffff",
+            }}
+          >
+            📷 INSTAGRAM
+          </a>
+        )}
+
         {profile.is_instagram_verified && (
           <div
-            className="px-3 py-1 text-xs"
+            className="px-3 py-1 text-xs mt-2"
             style={{
               fontFamily: "'Press Start 2P', cursive",
               backgroundColor: "#00ff00",

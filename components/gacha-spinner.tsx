@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,17 +21,29 @@ interface LeaderboardData {
   total_power: number;
 }
 
-const rarityColors = {
+// Expanded rarities with colors
+const rarityColors: Record<string, string> = {
+  Mythic: "#ff0080",
   Legendary: "#ffff00",
+  Epic: "#a855f7",
   Rare: "#00ffff",
-  Common: "#ff00ff",
+  Uncommon: "#22c55e",
+  Common: "#9ca3af",
 };
 
-const rarityWeights = {
-  Legendary: 0.05, // 5% base chance
-  Rare: 0.2, // 20% base chance
-  Common: 0.75, // 75% base chance
+// Drop rates (Chaos bonus adds to these)
+const rarityWeights: Record<string, number> = {
+  Mythic: 0.01, // 1%
+  Legendary: 0.03, // 3%
+  Epic: 0.07, // 7%
+  Rare: 0.15, // 15%
+  Uncommon: 0.25, // 25%
+  Common: 0.49, // 49%
 };
+
+const CHAOS_MAX = 50;
+const SIMP_MAX = 50;
+const COOLDOWN_HOURS = 3;
 
 export function GachaSpinner() {
   const [items, setItems] = useState<Item[]>([]);
@@ -41,26 +53,15 @@ export function GachaSpinner() {
   const [nextSpinTime, setNextSpinTime] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState<LeaderboardData | null>(null);
-  const [displayItems, setDisplayItems] = useState<Item[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [countdown, setCountdown] = useState<string>("");
-  const trainRef = useRef<HTMLDivElement>(null);
+  const [isSpinDisabled, setIsSpinDisabled] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
 
-  // Format time remaining as HH:MM:SS (using UTC for consistency)
-  const formatTimeRemaining = (targetTime: Date) => {
-    const nowMs = Date.now(); // Use UTC timestamp
-    const diff = Math.max(0, targetTime.getTime() - nowMs);
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const isChaosMaxed = (userStats?.chaos_stat || 0) >= CHAOS_MAX;
+  const isSimpMaxed = (userStats?.simp_stat || 0) >= SIMP_MAX;
 
   useEffect(() => {
     const loadData = async () => {
@@ -84,7 +85,6 @@ export function GachaSpinner() {
         return;
       }
 
-      // Load user's leaderboard stats (Chaos/Simp, Power calculated from inventory)
       const { data: leaderboard } = await supabase
         .from("leaderboard")
         .select("chaos_stat, simp_stat, item_power, total_power")
@@ -105,11 +105,6 @@ export function GachaSpinner() {
 
       setItems(allItems || []);
 
-      // Initialize displayItems with first item as placeholder
-      if (allItems && allItems.length > 0) {
-        setDisplayItems([allItems[0]]);
-      }
-
       const { data: gacha } = await supabase
         .from("gacha_logs")
         .select("last_spin_timestamp")
@@ -117,24 +112,13 @@ export function GachaSpinner() {
         .maybeSingle();
 
       if (gacha && gacha.last_spin_timestamp) {
-        // Parse the timestamp and handle timezone correctly
-        // The database stores UTC, but we want to show user's local time
-        const lastSpinDate = new Date(gacha.last_spin_timestamp);
+        const lastSpinMs = new Date(gacha.last_spin_timestamp).getTime();
+        const nextSpinMs = lastSpinMs + COOLDOWN_HOURS * 60 * 60 * 1000;
+        const nowMs = Date.now();
 
-        // Get the timezone offset in milliseconds for the user's local timezone
-        // getTimezoneOffset() returns minutes, positive for behind UTC
-        const tzOffsetMs = lastSpinDate.getTimezoneOffset() * 60 * 1000;
-
-        // Adjust the timestamp to show when it happened in user's local time
-        const lastSpinLocalMs = lastSpinDate.getTime() - tzOffsetMs;
-        const nextSpinLocalMs = lastSpinLocalMs + 24 * 60 * 60 * 1000;
-
-        // Current time in local timezone
-        const nowLocalMs = Date.now();
-
-        if (nowLocalMs < nextSpinLocalMs) {
+        if (nowMs < nextSpinMs) {
           setCanSpin(false);
-          setNextSpinTime(new Date(nextSpinLocalMs));
+          setNextSpinTime(new Date(nextSpinMs));
         }
       }
 
@@ -144,9 +128,7 @@ export function GachaSpinner() {
     loadData();
   }, []);
 
-  // Real-time countdown effect
   useEffect(() => {
-    // Clear any existing interval
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
@@ -158,7 +140,6 @@ export function GachaSpinner() {
     }
 
     const updateCountdown = () => {
-      // Use native UTC timestamp for consistent comparison
       const nowMs = Date.now();
       const diff = Math.max(0, nextSpinTime.getTime() - nowMs);
 
@@ -166,6 +147,7 @@ export function GachaSpinner() {
         setCanSpin(true);
         setNextSpinTime(null);
         setCountdown("");
+        setIsSpinDisabled(false);
         return;
       }
 
@@ -178,59 +160,75 @@ export function GachaSpinner() {
       );
     };
 
-    // Update immediately
     updateCountdown();
-
-    // Update every second
     countdownIntervalRef.current = window.setInterval(updateCountdown, 1000);
 
     return () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
       }
     };
   }, [nextSpinTime]);
 
-  // Calculate drop chance based on Chaos stat (very gradual bonus)
   const getDropChance = (rarity: string): number => {
-    const baseChance = rarityWeights[rarity as keyof typeof rarityWeights];
-    const chaosBonus = (userStats?.chaos_stat || 0) * 0.001; // 0.1% per Chaos point (very gradual)
+    const baseChance = rarityWeights[rarity] || 0;
+    const chaosBonus = (userStats?.chaos_stat || 0) * 0.01;
     const adjustedChance = Math.min(baseChance + chaosBonus, baseChance * 2);
     return adjustedChance;
   };
 
-  // Select item based on Chaos-adjusted weights
   const selectItem = (): Item | null => {
     if (items.length === 0) return null;
 
-    const legendary = items.filter((i) => i.rarity === "Legendary");
-    const rare = items.filter((i) => i.rarity === "Rare");
-    const common = items.filter((i) => i.rarity === "Common");
+    const pools: Record<string, Item[]> = {
+      Mythic: items.filter((i) => i.rarity === "Mythic"),
+      Legendary: items.filter((i) => i.rarity === "Legendary"),
+      Epic: items.filter((i) => i.rarity === "Epic"),
+      Rare: items.filter((i) => i.rarity === "Rare"),
+      Uncommon: items.filter((i) => i.rarity === "Uncommon"),
+      Common: items.filter((i) => i.rarity === "Common"),
+    };
 
     const roll = Math.random();
+
+    // Calculate cumulative chances with Chaos bonus
+    const mythicChance = getDropChance("Mythic");
+    const legendaryChance = getDropChance("Legendary");
+    const epicChance = getDropChance("Epic");
+    const rareChance = getDropChance("Rare");
+    const uncommonChance = getDropChance("Uncommon");
+    const commonChance =
+      1 -
+      mythicChance -
+      legendaryChance -
+      epicChance -
+      rareChance -
+      uncommonChance;
+
     let selectedRarity: string;
 
-    const legendaryChance = getDropChance("Legendary");
-    const rareChance = getDropChance("Rare");
-    const commonChance = 1 - legendaryChance - rareChance;
-
-    if (roll < legendaryChance) {
+    if (roll < mythicChance) {
+      selectedRarity = "Mythic";
+    } else if (roll < mythicChance + legendaryChance) {
       selectedRarity = "Legendary";
-    } else if (roll < legendaryChance + rareChance) {
+    } else if (roll < mythicChance + legendaryChance + epicChance) {
+      selectedRarity = "Epic";
+    } else if (
+      roll <
+      mythicChance + legendaryChance + epicChance + rareChance
+    ) {
       selectedRarity = "Rare";
+    } else if (
+      roll <
+      mythicChance + legendaryChance + epicChance + rareChance + uncommonChance
+    ) {
+      selectedRarity = "Uncommon";
     } else {
       selectedRarity = "Common";
     }
 
-    const pool =
-      selectedRarity === "Legendary"
-        ? legendary
-        : selectedRarity === "Rare"
-          ? rare
-          : common;
+    const pool = pools[selectedRarity] || [];
 
-    // Fallback to any item if pool is empty
     if (pool.length === 0) {
       return items[Math.floor(Math.random() * items.length)];
     }
@@ -238,61 +236,17 @@ export function GachaSpinner() {
     return pool[Math.floor(Math.random() * pool.length)];
   };
 
-  // Slot machine animation effect (vertical scrolling)
-  const runTrainAnimation = (targetItem: Item, onComplete: () => void) => {
+  const runLoadingAnimation = (targetItem: Item, onComplete: () => void) => {
     setSpinning(true);
     setResult(null);
 
-    // Create a vertical slot machine reel
-    const reelLength = 60; // Total items in the reel
-    const shuffledItems = [...items].sort(() => Math.random() - 0.5);
-
-    // Build the reel with random items
-    let reel: Item[] = [];
-    for (let i = 0; i < reelLength; i++) {
-      reel.push(shuffledItems[i % shuffledItems.length]);
-    }
-
-    // Place the target item near the end
-    const targetIndex = reelLength - 6 - Math.floor(Math.random() * 3);
-    reel[targetIndex] = targetItem;
-
-    setDisplayItems(reel);
-    setCurrentIndex(0);
-
-    // Animate through the reel with slot machine physics
-    let step = 0;
-    const animateStep = () => {
-      step++;
-      setCurrentIndex(step);
-
-      if (step < reelLength) {
-        // Slot machine speed curve: fast spin, then dramatic slowdown
-        let delay;
-        if (step < 10) {
-          // Quick acceleration
-          delay = 150 - step * 10;
-        } else if (step > reelLength - 15) {
-          // Dramatic deceleration at the end
-          const remaining = reelLength - step;
-          delay = 50 + (15 - remaining) * 60;
-        } else {
-          // Fast spinning in the middle
-          delay = 40;
-        }
-        animationRef.current = setTimeout(animateStep, delay);
-      } else {
-        // Animation complete - show result
-        setResult(targetItem);
-        setSpinning(false);
-        onComplete();
-      }
-    };
-
-    animationRef.current = setTimeout(animateStep, 150);
+    animationRef.current = setTimeout(() => {
+      setResult(targetItem);
+      setSpinning(false);
+      onComplete();
+    }, 2000);
   };
 
-  // Cleanup animation on unmount
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -302,22 +256,23 @@ export function GachaSpinner() {
   }, []);
 
   const handleSpin = async () => {
-    if (!canSpin || spinning) return;
+    if (!canSpin || spinning || isSpinDisabled) return;
+    setIsSpinDisabled(true);
 
     const selectedItemObj = selectItem();
 
     if (!selectedItemObj) {
       console.error("Failed to select an item");
+      setIsSpinDisabled(false);
       return;
     }
 
-    runTrainAnimation(selectedItemObj, async () => {
+    runLoadingAnimation(selectedItemObj, async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (user) {
-        // Check if user has this item
         const { data: existing } = await supabase
           .from("inventory")
           .select("*")
@@ -325,7 +280,8 @@ export function GachaSpinner() {
           .eq("item_id", selectedItemObj.id)
           .maybeSingle();
 
-        let chaosIncrement = 0.5; // Gradual increase: 0.5 per spin
+        const isDuplicate = !!existing;
+        const chaosIncrement = isDuplicate ? 0.05 : 0.1;
 
         if (existing) {
           await supabase
@@ -342,7 +298,6 @@ export function GachaSpinner() {
           ]);
         }
 
-        // Update gacha log
         const { data: gacha } = await supabase
           .from("gacha_logs")
           .select("id")
@@ -363,7 +318,6 @@ export function GachaSpinner() {
           ]);
         }
 
-        // Update user's Chaos stat in profiles table
         const { data: profile } = await supabase
           .from("profiles")
           .select("id, chaos_stat")
@@ -371,10 +325,15 @@ export function GachaSpinner() {
           .single();
 
         if (profile) {
+          const currentChaos = parseFloat(
+            profile.chaos_stat?.toString() || "0",
+          );
+          const newChaos = Math.min(currentChaos + chaosIncrement, CHAOS_MAX);
+
           await supabase
             .from("profiles")
             .update({
-              chaos_stat: (profile.chaos_stat || 0) + chaosIncrement,
+              chaos_stat: newChaos,
             })
             .eq("id", profile.id);
 
@@ -382,7 +341,7 @@ export function GachaSpinner() {
             prev
               ? {
                   ...prev,
-                  chaos_stat: (prev.chaos_stat || 0) + chaosIncrement,
+                  chaos_stat: newChaos,
                 }
               : null,
           );
@@ -392,30 +351,41 @@ export function GachaSpinner() {
               id: user.id,
               username:
                 user.user_metadata?.full_name || user.email || "Unknown",
-              chaos_stat: chaosIncrement,
+              chaos_stat: Math.min(chaosIncrement, CHAOS_MAX),
               simp_stat: 0,
-              power_stat: 0,
             },
           ]);
 
           setUserStats((prev) =>
             prev
-              ? { ...prev, chaos_stat: chaosIncrement }
+              ? { ...prev, chaos_stat: Math.min(chaosIncrement, CHAOS_MAX) }
               : {
-                  chaos_stat: chaosIncrement,
+                  chaos_stat: Math.min(chaosIncrement, CHAOS_MAX),
                   simp_stat: 0,
                   power_stat: 0,
                   item_power: 0,
-                  total_power: chaosIncrement,
+                  total_power: Math.min(chaosIncrement, CHAOS_MAX),
                 },
           );
         }
 
         setCanSpin(false);
-        // Set next spin time using native UTC timestamp
         const nowMs = Date.now();
-        const nextSpinMs = nowMs + 24 * 60 * 60 * 1000;
+        const nextSpinMs = nowMs + COOLDOWN_HOURS * 60 * 60 * 1000;
         setNextSpinTime(new Date(nextSpinMs));
+
+        const { data: updatedLeaderboard } = await supabase
+          .from("leaderboard")
+          .select("chaos_stat, simp_stat, item_power, total_power")
+          .eq("id", user.id)
+          .single();
+
+        if (updatedLeaderboard) {
+          setUserStats({
+            ...updatedLeaderboard,
+            power_stat: updatedLeaderboard.total_power || 0,
+          });
+        }
       }
     });
   };
@@ -430,7 +400,32 @@ export function GachaSpinner() {
     );
   }
 
-  const chaosBonusPercent = ((userStats?.chaos_stat || 0) * 0.1).toFixed(1);
+  const chaosBonusPercent = ((userStats?.chaos_stat || 0) * 1).toFixed(0);
+
+  // Get chaos bonus for display
+  const getChaosBonusText = () => {
+    if (isChaosMaxed) return " (MAX)";
+    return ` (+${chaosBonusPercent}% DROP)`;
+  };
+
+  // Get CHAOS increment based on rarity
+  const getChaosIncrement = (rarity: string, isDuplicate: boolean) => {
+    if (isDuplicate) return 0.05;
+    switch (rarity) {
+      case "Mythic":
+        return 0.5;
+      case "Legendary":
+        return 0.3;
+      case "Epic":
+        return 0.2;
+      case "Rare":
+        return 0.15;
+      case "Uncommon":
+        return 0.12;
+      default:
+        return 0.1;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6">
@@ -438,7 +433,7 @@ export function GachaSpinner() {
         style={{
           fontFamily: "'Press Start 2P', cursive",
           color: "#ff00ff",
-          textShadow: "0 0 10px #ff00ff, 0 0 20px #00ffff",
+          textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
           fontSize: "1.5rem",
           marginBottom: "1.5rem",
         }}
@@ -446,177 +441,133 @@ export function GachaSpinner() {
         DAILY GACHAPON
       </h1>
 
-      {/* User Stats */}
       <div className="mb-4 flex gap-4 text-xs">
         <div
           className="px-3 py-1 rounded"
           style={{
             fontFamily: "'Press Start 2P', cursive",
-            backgroundColor: "rgba(255, 0, 255, 0.2)",
-            color: "#ff00ff",
+            backgroundColor: isChaosMaxed
+              ? "rgba(0, 255, 0, 0.3)"
+              : "rgba(255, 0, 255, 0.2)",
+            color: isChaosMaxed ? "#00ff00" : "#ff00ff",
           }}
         >
-          CHAOS: {(userStats?.chaos_stat || 0).toFixed(1)} (+{chaosBonusPercent}
-          % DROP)
+          CHAOS: {(userStats?.chaos_stat || 0).toFixed(1)}
+          {isChaosMaxed ? " (MAX)" : ` (+${chaosBonusPercent}% DROP)`}
         </div>
         <div
           className="px-3 py-1 rounded"
           style={{
             fontFamily: "'Press Start 2P', cursive",
-            backgroundColor: "rgba(255, 0, 255, 0.2)",
-            color: "#ff00ff",
+            backgroundColor: isSimpMaxed
+              ? "rgba(0, 255, 0, 0.3)"
+              : "rgba(255, 0, 255, 0.2)",
+            color: isSimpMaxed ? "#00ff00" : "#ff00ff",
           }}
         >
-          SIMP: {userStats?.simp_stat || 0}
+          SIMP: {(userStats?.simp_stat || 0).toFixed(1)}
+          {isSimpMaxed && " (MAX)"}
         </div>
       </div>
 
-      {/* Slot Machine Container */}
       <div className="w-full max-w-md mb-6 flex justify-center">
-        {/* Single vertical slot reel */}
         <div
-          className="relative bg-black/80 rounded-xl border-4"
+          className="relative bg-black/80 rounded-xl border-4 flex items-center justify-center"
           style={{
             borderColor: result
-              ? rarityColors[result.rarity as keyof typeof rarityColors]
+              ? rarityColors[result.rarity] || "#00ffff"
               : "#00ffff",
             width: "300px",
             height: "450px",
             boxShadow: result
-              ? `0 0 40px ${rarityColors[result.rarity as keyof typeof rarityColors]}, inset 0 0 30px ${rarityColors[result.rarity as keyof typeof rarityColors]}20`
+              ? `0 0 40px ${rarityColors[result.rarity]}, inset 0 0 30px ${rarityColors[result.rarity]}20`
               : "0 0 20px #00ffff50",
           }}
         >
-          {/* Selection window indicator */}
-          <div
-            className="absolute left-4 right-4 border-4 border-yellow-400 rounded-lg pointer-events-none z-20"
-            style={{
-              top: "50%",
-              transform: "translateY(-50%)",
-              height: "150px",
-              boxShadow: "0 0 20px #ffff00, inset 0 0 20px #ffff0030",
-            }}
-          />
-
-          {/* Scrolling items container */}
-          <div
-            ref={trainRef}
-            className="relative overflow-hidden h-full"
-            style={{ padding: "130px 0" }}
-          >
-            {!spinning ? (
-              // Static placeholder when not spinning
+          {spinning && (
+            <motion.div
+              className="flex flex-col items-center justify-center"
+              animate={{
+                rotate: 360,
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            >
               <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] h-36 flex flex-col items-center justify-center "
+                className="text-6xl"
                 style={{
-                  borderColor: displayItems[0]
-                    ? rarityColors[
-                        displayItems[0].rarity as keyof typeof rarityColors
-                      ]
-                    : "#00ffff",
-                  backgroundColor: "rgba(0, 0, 0, 0.95)",
-                  boxShadow: displayItems[0]
-                    ? `0 0 30px ${rarityColors[displayItems[0].rarity as keyof typeof rarityColors]}`
-                    : "0 0 30px #00ffff",
+                  color: "#00ffff",
+                  textShadow: "0 0 20px #00ffff",
                 }}
               >
-                {displayItems[0]?.image_url ? (
-                  <img
-                    src={displayItems[0].image_url}
-                    alt={displayItems[0].name}
-                    className="w-20 h-20 object-contain mb-2"
-                  />
-                ) : (
-                  <div
-                    className="text-4xl mb-2"
-                    style={{
-                      color: displayItems[0]
-                        ? rarityColors[
-                            displayItems[0].rarity as keyof typeof rarityColors
-                          ]
-                        : "#00ffff",
-                    }}
-                  >
-                    ?
-                  </div>
-                )}
+                ◆
+              </div>
+            </motion.div>
+          )}
+
+          {result && !spinning && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, type: "spring" }}
+              className="flex flex-col items-center justify-center p-8"
+            >
+              {result.image_url ? (
+                <img
+                  src={result.image_url}
+                  alt={result.name}
+                  className="w-32 h-32 object-contain mb-4"
+                />
+              ) : (
                 <div
-                  className="text-sm text-center px-2"
+                  className="text-6xl mb-4"
                   style={{
-                    fontFamily: "'Press Start 2P', cursive",
-                    color: displayItems[0]
-                      ? rarityColors[
-                          displayItems[0].rarity as keyof typeof rarityColors
-                        ]
-                      : "#00ffff",
+                    color: rarityColors[result.rarity] || "#00ffff",
                   }}
                 >
-                  {displayItems[0]?.name || "SPIN TO WIN"}
+                  □
                 </div>
-              </div>
-            ) : (
-              // Animated scrolling items during spin
-              <motion.div
-                className="absolute left-4 right-4"
-                animate={{
-                  y: -currentIndex * 152,
+              )}
+              <div
+                className="text-lg text-center px-4"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  color: rarityColors[result.rarity] || "#00ffff",
+                  textShadow: `0 0 20px ${rarityColors[result.rarity]}`,
                 }}
-                transition={{
-                  duration: 0.05,
-                  ease: "linear",
-                }}
-                style={{ top: 0 }}
               >
-                {displayItems.map((item, index) => (
-                  <div
-                    key={`${item.id}-${index}`}
-                    className="w-full h-36 flex flex-col items-center justify-center mb-4"
-                    style={{
-                      borderColor:
-                        rarityColors[item.rarity as keyof typeof rarityColors],
-                      backgroundColor: "rgba(0, 0, 0, 0.95)",
-                    }}
-                  >
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="w-20 h-20 object-contain mb-2"
-                      />
-                    ) : (
-                      <div
-                        className="text-4xl mb-2"
-                        style={{
-                          color:
-                            rarityColors[
-                              item.rarity as keyof typeof rarityColors
-                            ],
-                        }}
-                      >
-                        □
-                      </div>
-                    )}
-                    <div
-                      className="text-sm text-center px-2 truncate w-full"
-                      style={{
-                        fontFamily: "'Press Start 2P', cursive",
-                        color:
-                          rarityColors[
-                            item.rarity as keyof typeof rarityColors
-                          ],
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </div>
+                {result.name}
+              </div>
+              <div
+                className="text-xs mt-2"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  color: rarityColors[result.rarity] || "#00ffff",
+                }}
+              >
+                {result.rarity.toUpperCase()}
+              </div>
+            </motion.div>
+          )}
+
+          {!spinning && !result && (
+            <div
+              className="text-center px-8"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                color: "#00ffff",
+                fontSize: "0.8rem",
+              }}
+            >
+              PRESS SPIN TO START
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Result Text */}
       <AnimatePresence>
         {result && (
           <motion.div
@@ -628,8 +579,8 @@ export function GachaSpinner() {
             <p
               style={{
                 fontFamily: "'Press Start 2P', cursive",
-                color: rarityColors[result.rarity as keyof typeof rarityColors],
-                textShadow: `0 0 20px ${rarityColors[result.rarity as keyof typeof rarityColors]}`,
+                color: rarityColors[result.rarity] || "#00ffff",
+                textShadow: `0 0 20px ${rarityColors[result.rarity]}`,
                 fontSize: "1rem",
                 marginBottom: "0.5rem",
               }}
@@ -643,27 +594,33 @@ export function GachaSpinner() {
                 color: "#00ffff",
               }}
             >
-              +{result.rarity === "Legendary" ? 2 : 1} CHAOS
+              +{getChaosIncrement(result.rarity, false)} CHAOS
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Spin Button */}
       <button
         onClick={handleSpin}
-        disabled={!canSpin || spinning}
+        disabled={!canSpin || spinning || isSpinDisabled}
         className="px-6 py-3 text-lg font-bold disabled:opacity-50"
         style={{
           fontFamily: "'Press Start 2P', cursive",
-          backgroundColor: canSpin && !spinning ? "#00ffff" : "#444444",
-          color: canSpin && !spinning ? "#050505" : "#999999",
+          backgroundColor:
+            canSpin && !spinning && !isSpinDisabled ? "#00ffff" : "#444444",
+          color:
+            canSpin && !spinning && !isSpinDisabled ? "#050505" : "#999999",
         }}
       >
-        {spinning ? "SPINNING..." : canSpin ? "SPIN NOW" : "LOCKED"}
+        {spinning
+          ? "SPINNING..."
+          : !canSpin && countdown
+            ? "COOLDOWN"
+            : canSpin
+              ? "SPIN NOW"
+              : "LOCKED"}
       </button>
 
-      {/* Real-time Countdown */}
       {!canSpin && countdown && (
         <div
           className="mt-6 text-center"
@@ -678,7 +635,6 @@ export function GachaSpinner() {
         </div>
       )}
 
-      {/* Back Button */}
       <button
         onClick={() => router.push("/")}
         className="mt-6 px-4 py-2 text-xs"
@@ -691,13 +647,12 @@ export function GachaSpinner() {
         BACK
       </button>
 
-      {/* Info */}
       <p
         className="mt-4 text-[10px] text-gray-500 text-center max-w-md"
         style={{ fontFamily: "'Press Start 2P', cursive" }}
       >
-        CHAOS increases drop rates (1% per point, max 50%) | SIMP increases
-        upgrade success rates | Get +2 CHAOS on duplicate items, +1 on new items
+        CHAOS: +1% per point (max 50%) | DROP: Mythic 1%, Legendary 3%, Epic 7%,
+        Rare 15%, Uncommon 25%, Common 49%
       </p>
     </div>
   );

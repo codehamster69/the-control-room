@@ -179,7 +179,7 @@ export default function HomePage() {
             style={{
               fontFamily: "'Press Start 2P', cursive",
               color: "#ff00ff",
-              textShadow: "0 0 10px #ff00ff, 0 0 20px #00ffff",
+              textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
             }}
           >
             THE CONTROL ROOM
@@ -263,7 +263,7 @@ export default function HomePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 10px #ff00ff, 0 0 20px #00ffff",
+            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
           }}
         >
           VERIFY INSTAGRAM
@@ -308,38 +308,43 @@ export default function HomePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 10px #ff00ff, 0 0 20px #00ffff",
+            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
           }}
         >
           THE CONTROL ROOM
         </h1>
 
         <div className="flex items-center gap-4">
-          {profile?.avatar_url && (
-            <img
-              src={profile.avatar_url}
-              alt="Profile"
-              className="w-10 h-10 rounded-full border-2"
-              style={{ borderColor: "#00ffff" }}
-            />
-          )}
-          <div className="text-right">
-            <div
-              className="text-cyan-400 font-mono"
-              style={{
-                fontFamily: "'Press Start 2P', cursive",
-                fontSize: "0.75rem",
-              }}
-            >
-              @{profile?.instagram_username}
+          <Link
+            href={`/profile/${user.id}`}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            {profile?.avatar_url && (
+              <img
+                src={profile.avatar_url}
+                alt="Profile"
+                className="w-10 h-10 rounded-full border-2"
+                style={{ borderColor: "#00ffff" }}
+              />
+            )}
+            <div className="text-right">
+              <div
+                className="text-cyan-400 font-mono"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  fontSize: "0.75rem",
+                }}
+              >
+                @{profile?.instagram_username}
+              </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-500 hover:text-red-400 text-xs font-mono"
-            >
-              LOGOUT
-            </button>
-          </div>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-gray-500 hover:text-red-400 text-xs font-mono"
+          >
+            LOGOUT
+          </button>
         </div>
       </div>
 
