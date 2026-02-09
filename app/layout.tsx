@@ -43,6 +43,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta
+          name="google-site-verification"
+          content="K06sanzA5GB5IZkZ7O3ywlHXKM26SgE4PB_oNmpz0GM"
+        />
         <link href="/favicon.ico" rel="icon" />
         <link
           href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"

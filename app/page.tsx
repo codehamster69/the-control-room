@@ -301,6 +301,32 @@ export default function HomePage() {
               ? "Already have an account? Sign in"
               : "Need an account? Sign up"}
           </button>
+
+          {/* Footer */}
+          <div
+            className="mt-16 text-center space-y-2"
+            style={{
+              fontFamily: "'Press Start 2P', cursive",
+              color: "#666666",
+              fontSize: "0.6rem",
+            }}
+          >
+            <div className="flex justify-center space-x-6 mb-4">
+              <Link
+                href="/privacy"
+                className="hover:text-cyan-400 transition-colors"
+              >
+                PRIVACY POLICY
+              </Link>
+              <Link
+                href="/terms"
+                className="hover:text-cyan-400 transition-colors"
+              >
+                TERMS OF SERVICE
+              </Link>
+            </div>
+            <p>THE CONTROL ROOM © 2025</p>
+          </div>
         </div>
       </div>
     );
@@ -346,6 +372,32 @@ export default function HomePage() {
         >
           LOGOUT
         </button>
+
+        {/* Footer */}
+        <div
+          className="mt-16 text-center space-y-2"
+          style={{
+            fontFamily: "'Press Start 2P', cursive",
+            color: "#666666",
+            fontSize: "0.6rem",
+          }}
+        >
+          <div className="flex justify-center space-x-6 mb-4">
+            <Link
+              href="/privacy"
+              className="hover:text-cyan-400 transition-colors"
+            >
+              PRIVACY POLICY
+            </Link>
+            <Link
+              href="/terms"
+              className="hover:text-cyan-400 transition-colors"
+            >
+              TERMS OF SERVICE
+            </Link>
+          </div>
+          <p>THE CONTROL ROOM © 2025</p>
+        </div>
       </div>
     );
   }
