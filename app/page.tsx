@@ -14,6 +14,7 @@ import {
   Users,
   LogOut,
 } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import InstagramVerification from "@/components/instagram-verification-form";
@@ -63,6 +64,28 @@ export default function HomePage() {
 
     checkUser();
   }, []);
+
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setAuthError(error.message);
+      }
+    } catch (err: any) {
+      setAuthError("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +218,35 @@ export default function HomePage() {
           >
             ENTER THE GLITCH
           </p>
+
+          {/* Google Sign-In Button */}
+          <button
+            onClick={handleGoogleAuth}
+            disabled={isLoading}
+            className="w-max text-lg mb-4 flex items-center justify-center gap-4"
+            style={{
+              fontFamily: "'Press Start 2P', cursive",
+              backgroundColor: "#4285f4",
+              color: "#ffffff",
+              padding: "12px 16px",
+              border: "none",
+              borderRadius: "0.375rem",
+              cursor: isLoading ? "not-allowed" : "pointer",
+            }}
+          >
+            {isLoading ? (
+              "LOADING..."
+            ) : (
+              <>
+                <FcGoogle className="size-12 bg-white rounded-full" />
+                SIGN IN WITH GOOGLE
+              </>
+            )}
+          </button>
+
+          <div className="text-cyan-400 font-mono text-sm mb-4 text-center">
+            OR
+          </div>
 
           {/* Email/Password Auth Form */}
           <form
@@ -531,13 +583,24 @@ export default function HomePage() {
 
       {/* Footer */}
       <div
-        className="mt-16 text-center"
+        className="mt-16 text-center space-y-2"
         style={{
           fontFamily: "'Press Start 2P', cursive",
           color: "#666666",
           fontSize: "0.6rem",
         }}
       >
+        <div className="flex justify-center space-x-6 mb-4">
+          <Link
+            href="/privacy"
+            className="hover:text-cyan-400 transition-colors"
+          >
+            PRIVACY POLICY
+          </Link>
+          <Link href="/terms" className="hover:text-cyan-400 transition-colors">
+            TERMS OF SERVICE
+          </Link>
+        </div>
         <p>THE CONTROL ROOM © 2025</p>
       </div>
     </div>
