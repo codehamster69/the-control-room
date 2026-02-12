@@ -197,9 +197,9 @@ export default function HomePage() {
   // Show dashboard if logged in and verified
   if (user && profile?.is_instagram_verified) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center p-6">
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center px-6">
         {/* Header */}
-        <div className="sticky top-0 z-50 bg-[#050505] w-full flex flex-col justify-between items-center mb-8 gap-4">
+        <div className="sticky top-0 z-50 bg-[#050505] py-2 w-full flex flex-col justify-between items-center mb-8 gap-4">
           <h1
             className="text-lg sm:text-xl md:text-2xl font-bold text-center sm:text-left"
             style={{
@@ -541,7 +541,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center gap-8 max-w-lg">
         {/* App Title & Branding */}
         <h1
-          className="text-5xl md:text-7xl font-bold text-center"
+          className="text-lg font-bold text-center sticky top-0 z-50 bg-[#050505] w-full py-4"
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
@@ -552,7 +552,7 @@ export default function HomePage() {
         </h1>
 
         <p
-          className="text-center text-lg"
+          className="text-center text-md"
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#00ffff",
@@ -757,12 +757,12 @@ export default function HomePage() {
             <button
               onClick={handleGoogleAuth}
               disabled={isLoading}
-              className="w-full max-w-sm text-lg flex items-center justify-center gap-4"
+              className="w-full max-w-sm text-sm flex items-center justify-center gap-4 px-1"
               style={{
                 fontFamily: "'Press Start 2P', cursive",
                 backgroundColor: "#4285f4",
                 color: "#ffffff",
-                padding: "12px 16px",
+                padding: "12px",
                 border: "none",
                 borderRadius: "0.375rem",
                 cursor: isLoading ? "not-allowed" : "pointer",
@@ -772,7 +772,7 @@ export default function HomePage() {
                 "LOADING..."
               ) : (
                 <>
-                  <FcGoogle className="size-8 bg-white rounded-full" />
+                  <FcGoogle className="size-6 bg-white rounded-full" />
                   SIGN IN WITH GOOGLE
                 </>
               )}
