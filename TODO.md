@@ -1,13 +1,141 @@
-# TODO: Change Login Method to Google Sign-In
+# The Control Room - Task List
 
-## Tasks
+## Completed Tasks ✅
 
-- [x] Add Google sign-in button to app/page.tsx login form
-- [x] Implement Google OAuth logic using Supabase signInWithOAuth
-- [x] Keep email/password as alternative option
-- [x] Ensure callback route handles OAuth (already does)
+### 1. Move Sell Feature to Armory
 
-## Notes
+- [x] Removed sell tab from hunt-bot-panel.tsx
+- [x] Added "SELL" filter tab to armory-grid.tsx
+- [x] Implemented individual item selling with quantity selector
+- [x] Implemented category-based selling (sell all items of a rarity)
+- [x] Implemented "sell all" functionality
+- [x] Sell value = item power (score_value)
 
-- User needs to configure Google OAuth in Supabase dashboard
-- Existing callback route should work for OAuth
+### 2. Remove Gacha/Spin Feature
+
+- [x] Removed gacha page references from app/page.tsx
+- [x] Removed gacha from navigation cards (now 2x2 grid without gacha)
+- [x] Removed gacha from public landing page features
+- [x] Gacha page files can be deleted (app/gacha/page.tsx, components/gacha-spinner.tsx)
+
+### 3. Change Seasonal to Monthly Ranking
+
+- [x] Updated leaderboard-view.tsx to have two tabs: Global and Monthly
+- [x] Global leaderboard shows all-time total_power (never resets)
+- [x] Monthly leaderboard shows monthly_power_gain (resets on 1st of month)
+- [x] Updated hunt-bot-panel.tsx to show monthly_power_gain stat
+
+### 4. Add All-Time Collection Section
+
+- [x] Added "COLLECTION" filter tab to armory-grid.tsx
+- [x] Collection shows all items ever collected (including sold items)
+- [x] Shows "SOLD" badge for items that were collected but no longer in inventory
+- [x] Collection progress counter in stats bar
+- [x] Uses `collection_history` JSON column to track all-time collection
+
+### 5. Remove CHAOS/SIMP Stats and Upgrade Features
+
+- [x] Removed chaos_stat and simp_stat from hunt-bot-panel.tsx
+- [x] Removed upgrade-related UI from hunt-bot-panel.tsx
+- [x] Removed upgrade-related UI from armory-grid.tsx
+- [x] Leaderboard now only shows power-based ranking
+
+### 6. Two Leaderboards (Global & Monthly)
+
+- [x] Global leaderboard: all-time power ranking
+- [x] Monthly leaderboard: monthly power ranking with reset info
+- [x] Both leaderboards accessible via tabs in leaderboard-view.tsx
+
+### 7. Item Descriptions on Hover
+
+- [x] Added description field to Item interface
+- [x] Description tooltip appears on hover in armory-grid.tsx
+- [x] Tooltip positioned above item with rarity-colored border
+
+### 8. Admin Panel Description Field
+
+- [x] Added description textarea to admin item form
+- [x] Updated API to handle description field (POST and PUT)
+- [x] Description shown in item list in admin panel
+
+### 9. Fix Leaderboard Mobile Styling
+
+- [x] Made leaderboard entries responsive (flex-wrap, min-w-0 for truncation)
+- [x] Smaller avatars and fonts on mobile
+- [x] Proper text truncation for long usernames
+- [x] Compact power display on mobile
+- [x] User rank section optimized for mobile
+
+## Files Modified
+
+### Components
+
+- `components/armory-grid.tsx` - Major rewrite with sell feature, collection view, descriptions
+- `components/hunt-bot-panel.tsx` - Removed sell/chaos/simp/upgrade features
+- `components/leaderboard-view.tsx` - Two-tab system, mobile optimization
+
+### API Routes
+
+- `app/api/admin/items/route.ts` - Added description field support
+- `app/api/economy/status/route.ts` - Fixed leaderboard service integration
+
+### Pages
+
+- `app/page.tsx` - Removed gacha references
+- `app/admin/page.tsx` - Added description field to item form
+
+## Database Schema Notes
+
+The following fields are used:
+
+### Items Table
+
+- `items.description` - Item description (nullable)
+- `items.rarity` - Item rarity (Common, Uncommon, Rare, Epic, Legendary, Mythic)
+- `items.score_value` - Item power value (used for sell price)
+
+### Profiles Table
+
+- `profiles.total_power` - All-time power (never resets)
+- `profiles.monthly_power_gain` - Monthly power (resets on 1st of month)
+- `profiles.total_items_collected` - All-time collection count
+- `profiles.current_items_owned` - Current inventory count
+- `profiles.token_balance` - User's token balance
+- `profiles.inventory` - **JSONB column** storing `{item_id: quantity}` for current items
+- `profiles.collection_history` - **JSONB column** storing `{item_id: total_collected}` for all-time tracking
+- `profiles.bot_items_per_hour_level` - Hunt bot speed upgrade level
+- `profiles.bot_runtime_level` - Max runtime upgrade level
+- `profiles.satellite_level` - Rare drop chance upgrade level
+- `profiles.bot_running_until` - Timestamp when bot session ends
+- `profiles.bot_accumulated_progress` - Fractional item accumulation
+- `profiles.last_free_run_at` - Last free hunt timestamp (for cooldown)
+
+## JSON Inventory System
+
+The inventory system now uses JSONB columns instead of separate tables:
+
+1. **Current Inventory** (`profiles.inventory`):
+   - Format: `{ "item-uuid-1": 5, "item-uuid-2": 3 }`
+   - Tracks current quantities of owned items
+   - Updated when items are granted (hunt) or sold
+
+2. **Collection History** (`profiles.collection_history`):
+   - Format: `{ "item-uuid-1": 10, "item-uuid-2": 5 }`
+   - Tracks total items ever collected (never decreases)
+   - Used for "All-Time Collection" view with SOLD badges
+
+## Migration Scripts
+
+- `scripts/add-inventory-json-columns.sql` - Adds inventory and collection_history JSONB columns
+- `scripts/fix-missing-columns.sql` - Adds missing economy columns (monthly_power_gain, bot upgrade levels, etc.)
+
+## Next Steps (Optional)
+
+- [ ] Delete gacha page files if no longer needed (app/gacha/page.tsx, components/gacha-spinner.tsx)
+- [ ] Test monthly reset functionality on 1st of month
+- [ ] Consider adding GIN indexes on JSON columns for better query performance
+
+## Remove Debugging from App
+
+- [x] Remove error details exposure from API routes (status, hunt/start)
+- [x] Remove console.error logs from sell API route

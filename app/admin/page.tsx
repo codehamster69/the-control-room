@@ -48,11 +48,13 @@ export default function AdminDashboard() {
 
   const [formData, setFormData] = useState<{
     name: string;
+    description: string;
     rarity: string;
     score_value: number;
     image_url: string;
   }>({
     name: "",
+    description: "",
     rarity: "Common",
     score_value: 10,
     image_url: "",
@@ -200,6 +202,7 @@ export default function AdminDashboard() {
 
       setFormData({
         name: "",
+        description: "",
         rarity: "Common",
         score_value: 10,
         image_url: "",
@@ -265,6 +268,7 @@ export default function AdminDashboard() {
   const handleEdit = (item: Item) => {
     setFormData({
       name: item.name,
+      description: item.description || "",
       rarity: item.rarity,
       score_value: item.score_value || 10,
       image_url: item.image_url || "",
@@ -439,6 +443,20 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
+                  <label className="block text-sm mb-2">DESCRIPTION</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Item description (shown on hover in armory)..."
+                    rows={3}
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-sm"
+                    style={{ borderColor: "#00ffff" }}
+                  />
+                </div>
+
+                <div>
                   <label className="block text-sm mb-2">IMAGE</label>
                   <input
                     type="file"
@@ -526,6 +544,7 @@ export default function AdminDashboard() {
                         setIsEditing(null);
                         setFormData({
                           name: "",
+                          description: "",
                           rarity: "Common",
                           score_value: 10,
                           image_url: "",

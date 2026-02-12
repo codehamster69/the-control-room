@@ -10,10 +10,8 @@ interface LeaderboardEntry {
   user_id: string;
   username: string;
   avatar_url: string | null;
-  chaos_stat: number;
-  simp_stat: number;
-  item_power: number;
   total_power: number;
+  monthly_power_gain: number;
   instagram_username?: string;
   instagram_avatar_url?: string;
 }
@@ -23,8 +21,16 @@ interface UserRankInfo {
   entry: LeaderboardEntry | null;
 }
 
+type LeaderboardType = "global" | "monthly";
+
 export function LeaderboardView() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [globalLeaderboard, setGlobalLeaderboard] = useState<
+    LeaderboardEntry[]
+  >([]);
+  const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<
+    LeaderboardEntry[]
+  >([]);
+  const [activeTab, setActiveTab] = useState<LeaderboardType>("global");
   const [displayedEntries, setDisplayedEntries] = useState<LeaderboardEntry[]>(
     [],
   );
@@ -47,7 +53,6 @@ export function LeaderboardView() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       router.push("/");
       return;
@@ -66,145 +71,111 @@ export function LeaderboardView() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("leaderboard")
-      .select(
-        `
-        id,
-        chaos_stat,
-        simp_stat,
-        item_power,
-        total_power,
-        username,
-        avatar_url
-      `,
-      )
-      .order("total_power", { ascending: false });
-
-    // Also fetch profile data for instagram_username
-    const { data: profileData } = await supabase
+    // Load both leaderboards - only verified users
+    const { data: globalData } = await supabase
       .from("profiles")
-      .select("id, instagram_username, avatar_url")
-      .in(
-        "id",
-        (data || []).map((entry: any) => entry.id),
-      );
+      .select(
+        "id, username, avatar_url, total_power, monthly_power_gain, instagram_username",
+      )
+      .eq("is_instagram_verified", true)
+      .order("total_power", { ascending: false })
+      .limit(100);
 
-    const profileMap = new Map(
-      (profileData || []).map((profile) => [profile.id, profile]),
-    );
+    const { data: monthlyData } = await supabase
+      .from("profiles")
+      .select(
+        "id, username, avatar_url, total_power, monthly_power_gain, instagram_username",
+      )
+      .eq("is_instagram_verified", true)
+      .order("monthly_power_gain", { ascending: false })
+      .limit(100);
 
-    const leaderboardData = (data || []).map((entry: any) => {
-      const profile = profileMap.get(entry.id);
-      return {
-        ...entry,
+    const processEntries = (data: any[] | null): LeaderboardEntry[] => {
+      return (data || []).map((entry: any, index: number) => ({
+        id: entry.id,
         user_id: entry.id,
-        username: profile?.instagram_username || entry.username || "unknown",
-        avatar_url: profile?.avatar_url || entry.avatar_url || null,
-      };
-    });
+        username: entry.username || entry.instagram_username || "Unknown",
+        avatar_url: entry.avatar_url,
+        total_power: entry.total_power || 0,
+        monthly_power_gain: entry.monthly_power_gain || 0,
+        instagram_username: entry.instagram_username,
+      }));
+    };
 
-    setLeaderboard(leaderboardData);
+    const globalEntries = processEntries(globalData);
+    const monthlyEntries = processEntries(monthlyData);
 
-    const userEntryIndex = leaderboardData.findIndex(
+    setGlobalLeaderboard(globalEntries);
+    setMonthlyLeaderboard(monthlyEntries);
+
+    // Find user in both leaderboards
+    const globalUserIndex = globalEntries.findIndex(
+      (entry) => entry.user_id === user.id,
+    );
+    const monthlyUserIndex = monthlyEntries.findIndex(
       (entry) => entry.user_id === user.id,
     );
 
-    if (userEntryIndex !== -1) {
+    if (activeTab === "global" && globalUserIndex !== -1) {
       setUserRank({
-        rank: userEntryIndex + 1,
-        entry: leaderboardData[userEntryIndex],
+        rank: globalUserIndex + 1,
+        entry: globalEntries[globalUserIndex],
       });
-      setUserEntry(leaderboardData[userEntryIndex]);
-    } else {
-      const { data: userProfile } = await supabase
-        .from("profiles")
-        .select("instagram_username, avatar_url")
-        .eq("id", user.id)
-        .single();
-
-      const placeholderEntry: LeaderboardEntry = {
-        id: user.id,
-        user_id: user.id,
-        username: userProfile?.instagram_username || "unknown",
-        avatar_url: userProfile?.avatar_url || null,
-        chaos_stat: 0,
-        simp_stat: 0,
-        item_power: 0,
-        total_power: 0,
-      };
-
+      setUserEntry(globalEntries[globalUserIndex]);
+    } else if (activeTab === "monthly" && monthlyUserIndex !== -1) {
       setUserRank({
-        rank: null,
-        entry: placeholderEntry,
+        rank: monthlyUserIndex + 1,
+        entry: monthlyEntries[monthlyUserIndex],
       });
-      setUserEntry(placeholderEntry);
+      setUserEntry(monthlyEntries[monthlyUserIndex]);
     }
 
-    const filtered = searchQuery
-      ? leaderboardData.filter((entry) =>
-          entry.username.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-      : leaderboardData;
-
-    let initialEntries = filtered.slice(0, ITEMS_PER_PAGE);
-    if (userEntryIndex === -1 && userEntry) {
-      initialEntries = [...initialEntries, userEntry];
-    }
-    setDisplayedEntries(initialEntries);
-    setPage(1);
-    setHasMore(filtered.length > ITEMS_PER_PAGE);
+    setDisplayedEntries(
+      activeTab === "global"
+        ? globalEntries.slice(0, ITEMS_PER_PAGE)
+        : monthlyEntries.slice(0, ITEMS_PER_PAGE),
+    );
+    setHasMore(
+      (activeTab === "global" ? globalEntries : monthlyEntries).length >
+        ITEMS_PER_PAGE,
+    );
     setLoading(false);
-  }, [router, supabase, searchQuery]);
+  }, [activeTab]);
 
-  const loadMore = useCallback(() => {
-    if (!hasMore) return;
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
 
-    const filtered = searchQuery
-      ? leaderboard.filter((entry) =>
-          entry.username.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-      : leaderboard;
+  useEffect(() => {
+    // Update displayed entries when tab changes
+    const entries =
+      activeTab === "global" ? globalLeaderboard : monthlyLeaderboard;
+    setDisplayedEntries(entries.slice(0, (page + 1) * ITEMS_PER_PAGE));
+    setHasMore(entries.length > (page + 1) * ITEMS_PER_PAGE);
 
-    const startIndex = page * ITEMS_PER_PAGE;
-    const nextEntries = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-    if (nextEntries.length > 0) {
-      let entriesToAdd = nextEntries;
-      if (userEntry && !filtered.find((e) => e.user_id === currentUserId)) {
-        const insertIndex = startIndex + ITEMS_PER_PAGE - 1;
-        if (insertIndex >= filtered.length) {
-          entriesToAdd = [...nextEntries, userEntry];
-        }
+    // Update user rank for current tab
+    if (currentUserId) {
+      const userIndex = entries.findIndex(
+        (entry) => entry.user_id === currentUserId,
+      );
+      if (userIndex !== -1) {
+        setUserRank({ rank: userIndex + 1, entry: entries[userIndex] });
+        setUserEntry(entries[userIndex]);
       }
-
-      setDisplayedEntries((prev) => [...prev, ...entriesToAdd]);
-      setPage((p) => p + 1);
-      setHasMore(startIndex + ITEMS_PER_PAGE < filtered.length || !userEntry);
-    } else {
-      if (
-        userEntry &&
-        !displayedEntries.find((e) => e.user_id === currentUserId)
-      ) {
-        setDisplayedEntries((prev) => [...prev, userEntry]);
-      }
-      setHasMore(false);
     }
-  }, [
-    leaderboard,
-    page,
-    hasMore,
-    searchQuery,
-    userEntry,
-    currentUserId,
-    displayedEntries,
-  ]);
+  }, [activeTab, globalLeaderboard, monthlyLeaderboard]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore();
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          const entries =
+            activeTab === "global" ? globalLeaderboard : monthlyLeaderboard;
+          const nextPage = page + 1;
+          const nextEntries = entries.slice(0, (nextPage + 1) * ITEMS_PER_PAGE);
+          setDisplayedEntries(nextEntries);
+          setPage(nextPage);
+          setHasMore(entries.length > (nextPage + 1) * ITEMS_PER_PAGE);
         }
       },
       { threshold: 0.1 },
@@ -215,66 +186,83 @@ export function LeaderboardView() {
     }
 
     return () => observer.disconnect();
-  }, [loadMore, hasMore]);
+  }, [
+    hasMore,
+    loading,
+    page,
+    activeTab,
+    globalLeaderboard,
+    monthlyLeaderboard,
+  ]);
 
-  useEffect(() => {
-    loadLeaderboard();
-  }, [loadLeaderboard]);
-
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return "#ffff00";
-    if (rank === 2) return "#00ffff";
-    if (rank === 3) return "#ff6b6b";
-    return "#ff00ff";
-  };
-
-  const getDisplayRank = (entry: LeaderboardEntry) => {
-    const leaderboardIndex = leaderboard.findIndex(
-      (e) => e.user_id === entry.user_id,
-    );
-    if (leaderboardIndex !== -1) {
-      return leaderboardIndex + 1;
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      const entries =
+        activeTab === "global" ? globalLeaderboard : monthlyLeaderboard;
+      setDisplayedEntries(entries.slice(0, ITEMS_PER_PAGE));
+      setPage(0);
+      setHasMore(entries.length > ITEMS_PER_PAGE);
+      return;
     }
-    if (userRank.rank && entry.user_id === currentUserId) {
-      return userRank.rank;
-    }
-    return displayedEntries.indexOf(entry) + 1;
-  };
 
-  const isCurrentUser = (entry: LeaderboardEntry) => {
-    return entry.user_id === currentUserId;
-  };
-
-  const navigateToProfile = (userId: string) => {
-    router.push(`/profile/${userId}`);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-cyan-400 font-mono text-2xl animate-pulse">
-          LOADING LEADERBOARD...
-        </div>
-      </div>
+    const query = searchQuery.toLowerCase();
+    const entries =
+      activeTab === "global" ? globalLeaderboard : monthlyLeaderboard;
+    const filtered = entries.filter(
+      (entry) =>
+        entry.username.toLowerCase().includes(query) ||
+        entry.instagram_username?.toLowerCase().includes(query),
     );
-  }
+    setDisplayedEntries(filtered);
+    setHasMore(false);
+  };
+
+  const getRankStyle = (rank: number) => {
+    if (rank === 1)
+      return {
+        color: "#ffd700",
+        bg: "rgba(255, 215, 0, 0.2)",
+        border: "#ffd700",
+      };
+    if (rank === 2)
+      return {
+        color: "#c0c0c0",
+        bg: "rgba(192, 192, 192, 0.2)",
+        border: "#c0c0c0",
+      };
+    if (rank === 3)
+      return {
+        color: "#cd7f32",
+        bg: "rgba(205, 127, 50, 0.2)",
+        border: "#cd7f32",
+      };
+    return {
+      color: "#00ffff",
+      bg: "rgba(0, 255, 255, 0.1)",
+      border: "#00ffff",
+    };
+  };
+
+  const currentLeaderboard =
+    activeTab === "global" ? globalLeaderboard : monthlyLeaderboard;
 
   return (
-    <div className="min-h-screen bg-[#050505] p-4 md:p-6 pb-32">
-      <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
+    <div className="p-4 md:p-6">
+      {/* Header */}
+      <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
         <h1
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
             textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
-            fontSize: "1.25rem",
+            fontSize: "1.2rem",
           }}
         >
-          LEADERBOARD
+          RANKING
         </h1>
         <button
           onClick={() => router.push("/")}
-          className="px-3 py-2 text-xs"
+          className="px-3 py-1.5 text-[10px]"
           style={{
             fontFamily: "'Press Start 2P', cursive",
             backgroundColor: "#ff00ff",
@@ -285,207 +273,214 @@ export function LeaderboardView() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-4 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* Tab Selection */}
+      <div className="mb-4 flex border-2" style={{ borderColor: "#333" }}>
+        <button
+          onClick={() => setActiveTab("global")}
+          className="flex-1 px-4 py-2 text-[10px] transition-colors"
+          style={{
+            fontFamily: "'Press Start 2P', cursive",
+            backgroundColor:
+              activeTab === "global" ? "rgba(255, 215, 0, 0.3)" : "transparent",
+            color: activeTab === "global" ? "#ffd700" : "#666",
+          }}
+        >
+          🏆 GLOBAL (ALL TIME)
+        </button>
+        <button
+          onClick={() => setActiveTab("monthly")}
+          className="flex-1 px-4 py-2 text-[10px] transition-colors"
+          style={{
+            fontFamily: "'Press Start 2P', cursive",
+            backgroundColor:
+              activeTab === "monthly"
+                ? "rgba(0, 255, 255, 0.3)"
+                : "transparent",
+            color: activeTab === "monthly" ? "#00ffff" : "#666",
+          }}
+        >
+          📅 MONTHLY (RESETS 1ST)
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-4 flex gap-2">
         <input
           type="text"
-          placeholder="SEARCH PLAYER..."
+          placeholder="SEARCH USER..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-black/50 border border-cyan-500/30 rounded-lg pl-10 pr-4 py-3 text-white placeholder:text-gray-600 focus:border-cyan-500 focus:outline-none"
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          className="flex-1 px-3 py-2 text-[10px] bg-black border-2"
           style={{
             fontFamily: "'Press Start 2P', cursive",
-            fontSize: "0.65rem",
+            borderColor: "#333",
+            color: "#00ffff",
           }}
         />
+        <button
+          onClick={handleSearch}
+          className="px-3 py-2"
+          style={{
+            fontFamily: "'Press Start 2P', cursive",
+            backgroundColor: "#00ffff",
+            color: "#000",
+            fontSize: "0.6rem",
+          }}
+        >
+          <Search className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Results count */}
-      <div className="mb-3 text-gray-400 font-mono text-xs">
-        {searchQuery
-          ? `Found ${
-              leaderboard.filter((entry) =>
-                entry.username
-                  .toLowerCase()
-                  .includes(searchQuery.toLowerCase()),
-              ).length
-            } players`
-          : `${leaderboard.length} players total`}
-      </div>
+      {/* User's Own Rank - Mobile Optimized */}
+      {userRank.entry && (
+        <div
+          className="mb-4 p-3 rounded border-2 fixed bottom-0 right-0 left-0"
+          style={{
+            borderColor: "#ff00ff",
+            backgroundColor: "rgba(255, 0, 255, 0.1)",
+          }}
+        >
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <div
+              className="text-lg font-bold"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                color: "#ff00ff",
+                fontSize: "0.8rem",
+              }}
+            >
+              #{userRank.rank}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-xs truncate"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  color: "#fff",
+                }}
+              >
+                {userRank.entry.instagram_username}
+              </div>
+              <div
+                className="text-[9px] text-gray-400"
+                style={{ fontFamily: "'Press Start 2P', cursive" }}
+              >
+                YOU
+              </div>
+            </div>
+            <div
+              className="px-2 py-1 rounded text-xs"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                backgroundColor: "#ffff00",
+                color: "#000",
+              }}
+            >
+              {activeTab === "global"
+                ? userRank.entry.total_power
+                : userRank.entry.monthly_power_gain}{" "}
+              PWR
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Table Header */}
-      <div
-        className="grid gap-0 border-2 mb-1"
-        style={{
-          borderColor: "#00ffff",
-          backgroundColor: "rgba(0, 255, 255, 0.1)",
-          gridTemplateColumns: "50px 1fr 70px 70px 90px",
-        }}
-      >
-        <div
-          className="px-3 py-2 text-left"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#00ffff",
-            fontSize: "0.55rem",
-          }}
-        >
-          RANK
-        </div>
-        <div
-          className="px-3 py-2 text-left"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#00ffff",
-            fontSize: "0.55rem",
-          }}
-        >
-          PLAYER
-        </div>
-        <div
-          className="px-3 py-2 text-center"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#ff00ff",
-            fontSize: "0.55rem",
-          }}
-        >
-          CHAOS
-        </div>
-        <div
-          className="px-3 py-2 text-center"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#ff00ff",
-            fontSize: "0.55rem",
-          }}
-        >
-          SIMP
-        </div>
-        <div
-          className="px-3 py-2 text-center"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#ffff00",
-            fontSize: "0.55rem",
-          }}
-        >
-          TOTAL
-        </div>
-      </div>
+      {/* Leaderboard Entries - Mobile Optimized */}
+      <div className="space-y-2">
+        {displayedEntries.map((entry, index) => {
+          const rank = index + 1;
+          const rankStyle = getRankStyle(rank);
+          const isCurrentUser = entry.user_id === currentUserId;
 
-      {/* Table Body */}
-      <div>
-        {displayedEntries.map((entry) => {
-          const rank = getDisplayRank(entry);
-          const isUser = isCurrentUser(entry);
           return (
             <div
               key={entry.user_id}
-              className="grid gap-0 border-b border-gray-700 cursor-pointer hover:bg-[#1a1a2e] transition-colors"
+              onClick={() => router.push(`/profile/${entry.user_id}`)}
+              className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded border cursor-pointer transition-all hover:scale-[1.02] ${isCurrentUser ? "ring-2 ring-pink-500" : ""}`}
               style={{
-                gridTemplateColumns: "50px 1fr 70px 70px 90px",
-                backgroundColor: isUser
-                  ? "rgba(255, 200, 0, 0.08)"
-                  : rank % 2 === 0
-                    ? "rgba(255, 0, 255, 0.03)"
-                    : "transparent",
-                borderLeft: isUser ? "4px solid #ffff00" : "none",
+                fontFamily: "'Press Start 2P', cursive",
+                borderColor: rankStyle.border,
+                backgroundColor: rankStyle.bg,
               }}
-              onClick={() => navigateToProfile(entry.user_id)}
             >
               {/* Rank */}
-              <div
-                className="px-3 py-3 flex items-center"
-                style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  color: getRankColor(rank),
-                  fontSize: "0.65rem",
-                }}
-              >
-                #{rank}
+              <div className="w-8 md:w-10 text-center shrink-0">
+                <span
+                  style={{
+                    color: rankStyle.color,
+                    fontSize: rank <= 3 ? "1rem" : "0.75rem",
+                  }}
+                >
+                  {rank <= 3
+                    ? rank === 1
+                      ? "🥇"
+                      : rank === 2
+                        ? "🥈"
+                        : "🥉"
+                    : `#${rank}`}
+                </span>
               </div>
 
-              {/* Player */}
-              <div className="px-3 py-3 flex items-center gap-2">
+              {/* Avatar */}
+              <div
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden shrink-0 border"
+                style={{ borderColor: rankStyle.border }}
+              >
                 {entry.avatar_url ? (
                   <img
                     src={entry.avatar_url}
                     alt=""
-                    className="w-8 h-8 rounded-full"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div
-                    className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center shrink-0"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      fontSize: "0.5rem",
-                      color: "#ff00ff",
-                    }}
-                  >
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center text-xs">
                     ?
                   </div>
                 )}
-                <div className="flex flex-col overflow-hidden">
-                  <span
-                    className="truncate"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      color: isUser ? "#ffff00" : "#00ffff",
-                      fontSize: "0.6rem",
-                      maxWidth: "100%",
-                    }}
-                    title={`@${entry.username || "unknown"}`}
-                  >
-                    @{entry.username || "unknown"}
-                  </span>
-                  {isUser && (
-                    <span
-                      className="text-[9px] text-yellow-500"
-                      style={{ fontFamily: "'Press Start 2P', cursive" }}
-                    >
-                      YOU
-                    </span>
-                  )}
+              </div>
+
+              {/* Username - Truncated on mobile */}
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-xs truncate"
+                  style={{ color: rankStyle.color }}
+                >
+                  @{entry.instagram_username}
                 </div>
+                {entry.instagram_username &&
+                  entry.instagram_username !== entry.username && (
+                    <div className="text-[8px] text-gray-500 truncate">
+                      IG: @{entry.instagram_username}
+                    </div>
+                  )}
               </div>
 
-              {/* Chaos */}
+              {/* Power - Compact on mobile */}
               <div
-                className="px-3 py-3 flex items-center justify-center"
+                className="px-2 py-1 rounded text-right shrink-0"
                 style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  color: "#ff00ff",
-                  fontSize: "0.65rem",
+                  backgroundColor:
+                    rank <= 3 ? rankStyle.color : "rgba(0,0,0,0.3)",
                 }}
               >
-                {(entry.chaos_stat || 0).toFixed(1)}
-              </div>
-
-              {/* Simp */}
-              <div
-                className="px-3 py-3 flex items-center justify-center"
-                style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  color: "#ff00ff",
-                  fontSize: "0.65rem",
-                }}
-              >
-                {(entry.simp_stat || 0).toFixed(1)}
-              </div>
-
-              {/* Total */}
-              <div
-                className="px-3 py-3 flex items-center justify-center"
-                style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  color: "#ffff00",
-                  fontSize: "0.65rem",
-                  textShadow: "0 0 5px #ffff00",
-                }}
-              >
-                {Math.floor(entry.total_power || 0)}
+                <div
+                  className="text-xs font-bold"
+                  style={{
+                    color: rank <= 3 ? "#000" : rankStyle.color,
+                    fontSize: "0.65rem",
+                  }}
+                >
+                  {activeTab === "global"
+                    ? entry.total_power
+                    : entry.monthly_power_gain}
+                </div>
+                <div
+                  className="text-[7px]"
+                  style={{ color: rank <= 3 ? "#000" : "#888" }}
+                >
+                  PWR
+                </div>
               </div>
             </div>
           );
@@ -493,156 +488,25 @@ export function LeaderboardView() {
       </div>
 
       {/* Loading indicator */}
-      {hasMore && (
-        <div
-          ref={observerTarget}
-          className="flex justify-center py-4"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            color: "#00ffff",
-            fontSize: "0.55rem",
-          }}
-        >
-          LOADING MORE...
-        </div>
-      )}
+      <div ref={observerTarget} className="h-4 mt-4" />
 
-      {!hasMore && displayedEntries.length > 0 && (
-        <div
-          className="text-center py-4 text-gray-500"
-          style={{
-            fontFamily: "'Press Start 2P', cursive",
-            fontSize: "0.55rem",
-          }}
-        >
-          END OF LEADERBOARD
-        </div>
-      )}
-
-      {/* User Rank Summary - Sleek Compact Version */}
-      {userRank.entry && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50"
-          style={{ backgroundColor: "rgba(5, 5, 5, 0.95)" }}
-        >
+      {/* Loading state */}
+      {loading && (
+        <div className="text-center py-8">
           <div
-            className="mx-auto px-4 py-3 md:px-6 md:py-4"
-            style={{ maxWidth: "800px" }}
+            className="text-cyan-400 font-mono animate-pulse"
+            style={{
+              fontFamily: "'Press Start 2P', cursive",
+              fontSize: "0.7rem",
+            }}
           >
-            <div
-              className="grid items-center gap-3 md:gap-6 p-3 md:p-4 rounded-lg border-2"
-              style={{
-                borderColor: "#ff00ff",
-                backgroundColor: "rgba(255, 0, 255, 0.05)",
-                gridTemplateColumns: "auto 1fr auto",
-              }}
-            >
-              {/* Avatar & Username */}
-              <div className="flex items-center gap-2 md:gap-3">
-                {userRank.entry.avatar_url ? (
-                  <img
-                    src={userRank.entry.avatar_url}
-                    alt=""
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full"
-                    style={{
-                      border: "3px solid #ffff00",
-                      boxShadow: "0 0 10px rgba(255, 255, 0, 0.5)",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-800 flex items-center justify-center"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      fontSize: "0.6rem",
-                      color: "#ff00ff",
-                    }}
-                  >
-                    ?
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <span
-                    className="text-cyan-400 truncate max-w-[100px] md:max-w-[150px]"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      fontSize: "0.6rem",
-                    }}
-                  >
-                    @{userRank.entry.username}
-                  </span>
-                  <span
-                    className="text-yellow-500 text-[10px]"
-                    style={{ fontFamily: "'Press Start 2P', cursive" }}
-                  >
-                    YOU
-                  </span>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="flex items-center justify-center gap-3 md:gap-6">
-                {/* Rank Badge */}
-                <div
-                  className="px-2 py-1 md:px-3 md:py-1 rounded font-bold text-center min-w-[60px]"
-                  style={{
-                    fontFamily: "'Press Start 2P', cursive",
-                    backgroundColor: userRank.rank
-                      ? getRankColor(userRank.rank)
-                      : "#333",
-                    color: "#000",
-                    fontSize: "0.55rem",
-                  }}
-                >
-                  {userRank.rank ? `#${userRank.rank}` : "UNRANKED"}
-                </div>
-
-                {/* Stats */}
-                <div className="flex gap-2 md:gap-3">
-                  <div
-                    className="px-2 py-1 rounded text-center"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      backgroundColor: "#ff00ff",
-                      color: "#000",
-                      fontSize: "0.5rem",
-                    }}
-                  >
-                    C: {(userRank.entry.chaos_stat || 0).toFixed(0)}
-                  </div>
-                  <div
-                    className="px-2 py-1 rounded text-center"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      backgroundColor: "#ff00ff",
-                      color: "#000",
-                      fontSize: "0.5rem",
-                    }}
-                  >
-                    S: {(userRank.entry.simp_stat || 0).toFixed(0)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Total Power */}
-              <div
-                className="px-3 py-1 md:px-4 md:py-2 rounded font-bold text-right"
-                style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  backgroundColor: "#ffff00",
-                  color: "#000",
-                  fontSize: "0.6rem",
-                }}
-              >
-                {Math.floor(userRank.entry.total_power || 0)} PWR
-              </div>
-            </div>
+            LOADING...
           </div>
         </div>
       )}
 
       {/* No entries */}
-      {leaderboard.length === 0 && !userEntry && (
+      {!loading && currentLeaderboard.length === 0 && (
         <div
           className="text-center py-12"
           style={{
@@ -655,14 +519,15 @@ export function LeaderboardView() {
         </div>
       )}
 
-      {/* Stats Info */}
+      {/* Info */}
       <div className="mt-4 p-3 rounded bg-black/30 border border-gray-800">
         <p
-          className="text-gray-500 text-[10px] font-mono"
+          className="text-gray-500 text-[9px] md:text-[10px]"
           style={{ fontFamily: "'Press Start 2P', cursive" }}
         >
-          CHAOS: Higher = Better gacha drop rates (1% per point, max 50%) |
-          SIMP: Higher = Better upgrade success rates (1% per point, max 50%)
+          {activeTab === "global"
+            ? "GLOBAL: All-time power ranking. Never resets."
+            : "MONTHLY: Resets on the 1st of each month. Hunt to gain monthly power!"}
         </p>
       </div>
     </div>

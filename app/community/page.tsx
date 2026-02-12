@@ -70,7 +70,7 @@ export default function CommunityPage() {
       const data = await response.json();
       setCommunityLinks(data.links || []);
     } catch (err) {
-      console.error("Failed to fetch community links:", err);
+      // Silently handle error
     } finally {
       setLinksLoading(false);
     }

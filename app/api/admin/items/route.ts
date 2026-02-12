@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, rarity, score_value, image_url } = body;
+    const { name, description, rarity, score_value, image_url } = body;
 
     if (!name || !rarity || score_value === undefined) {
       return NextResponse.json(
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       .from("items")
       .insert({
         name: String(name),
+        description: description || null,
         rarity: normalizedRarity,
         score_value: parseInt(String(score_value)),
         image_url: image_url || null,
@@ -175,17 +176,21 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, rarity, score_value, image_url } = body;
+    const { id, name, description, rarity, score_value, image_url } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
     }
 
     // Build update object with explicit types
-    const updateData: { name?: string; rarity?: string; score_value?: number; image_url?: string | null } = {};
+    const updateData: { name?: string; description?: string | null; rarity?: string; score_value?: number; image_url?: string | null } = {};
 
     if (name !== undefined) {
       updateData.name = String(name);
+    }
+
+    if (description !== undefined) {
+      updateData.description = description || null;
     }
 
     if (rarity) {
@@ -299,4 +304,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-
