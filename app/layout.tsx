@@ -53,8 +53,28 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`font-sans antialiased bg-[#050505]`}>
-        {children}
+      <body
+        className={`font-sans antialiased bg-[#0a0a0a] overflow-hidden h-screen flex items-center justify-center`}
+      >
+        {/* Phone frame container */}
+        <div
+          className="relative w-full max-w-md h-[95vh] overflow-hidden"
+          style={{
+            border: "3px solid transparent",
+            borderRadius: "24px",
+            boxShadow:
+              "0 0 2px rgba(0, 255, 255, 0.15), 0 0 2px rgba(255, 0, 255, 0.1), inset 0 0 2px rgba(0, 255, 255, 0.05)",
+            background: "linear-gradient(180deg, #050505 0%, #0a0a0a 40%)",
+          }}
+        >
+          {/* Scrollable content area with custom scrollbar */}
+          <div
+            className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar"
+            style={{ borderRadius: "24px" }}
+          >
+            {children}
+          </div>
+        </div>
         <Analytics />
       </body>
     </html>

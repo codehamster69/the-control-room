@@ -54,19 +54,20 @@ export class HuntBotService {
     let isRunning = false;
     let progressPercent = 0;
     let remainingMinutes = 0;
-    let runtimeMinutes = FREE_RUN_DURATION_MINUTES;
 
     if (state.bot_running_until && state.bot_running_until > now) {
       isRunning = true;
-      // Calculate actual runtime from the session
-      const maxRuntime = calculateMaxRuntimeMinutes(state.bot_runtime_level);
-      // Try to determine actual runtime from end time
+      // Use the stored session runtime, or estimate from remaining time if not available
       const sessionEnd = state.bot_running_until;
-      const sessionStart = sessionEnd - (maxRuntime * 60 * 1000);
-      const actualRuntime = Math.min(maxRuntime, Math.ceil((sessionEnd - sessionStart) / (60 * 1000)));
-      runtimeMinutes = actualRuntime > 0 ? actualRuntime : FREE_RUN_DURATION_MINUTES;
-      
+      // Calculate runtime from the stored start time or estimate from remaining time
+      const remainingMs = sessionEnd - now;
+      const remainingMins = Math.ceil(remainingMs / (60 * 1000));
+      // For existing hunts without stored runtime, estimate from remaining time
+      // Add a small buffer to ensure we don't underestimate
+      const estimatedRuntime = state.bot_session_runtime_minutes || Math.max(FREE_RUN_DURATION_MINUTES, remainingMins + 1);
+      const runtimeMinutes = estimatedRuntime;
       const startedAt = sessionEnd - (runtimeMinutes * 60 * 1000);
+      
       progressPercent = calculateBotProgressPercent(
         startedAt, 
         runtimeMinutes, 
@@ -136,6 +137,7 @@ export class HuntBotService {
       .from('profiles')
       .update({
         bot_running_until: endTime,
+        bot_session_runtime_minutes: FREE_RUN_DURATION_MINUTES,
         last_free_run_at: now,
       })
       .eq('id', this.userId);
@@ -221,6 +223,7 @@ export class HuntBotService {
       .from('profiles')
       .update({
         bot_running_until: endTime,
+        bot_session_runtime_minutes: runtimeMinutes,
         token_balance: state.token_balance - cost,
       })
       .eq('id', this.userId);
@@ -267,12 +270,8 @@ export class HuntBotService {
     // Calculate effective items per hour based on upgrade level
     const effectiveItemsPerHour = BASE_ITEMS_PER_HOUR + (state.bot_items_per_hour_level * 1);
     
-    // Calculate actual runtime from session
-    const maxRuntime = calculateMaxRuntimeMinutes(state.bot_runtime_level);
-    const sessionEnd = state.bot_running_until || now;
-    const sessionStart = sessionEnd - (maxRuntime * 60 * 1000);
-    const actualRuntime = Math.min(maxRuntime, Math.ceil((sessionEnd - Math.min(sessionStart, now)) / (60 * 1000)));
-    const runtimeMinutes = actualRuntime > 0 ? actualRuntime : FREE_RUN_DURATION_MINUTES;
+    // Use the stored session runtime for accurate calculation
+    const runtimeMinutes = state.bot_session_runtime_minutes || FREE_RUN_DURATION_MINUTES;
 
     // Calculate items granted with fractional accumulation
     const { itemsGranted, newAccumulated } = calculateItemsGranted(
@@ -410,6 +409,7 @@ export class HuntBotService {
       .from('profiles')
       .update({
         bot_running_until: null,
+        bot_session_runtime_minutes: null,
         bot_accumulated_progress: newAccumulated,
         total_items_collected: newTotalItems,
         current_items_owned: newCurrentItems,
@@ -472,6 +472,7 @@ export class HuntBotService {
         monthly_power_gain,
         bot_accumulated_progress,
         bot_running_until,
+        bot_session_runtime_minutes,
         last_free_run_at,
         subscription_expiry,
         owned_ticket_ids,
@@ -495,6 +496,7 @@ export class HuntBotService {
         monthly_power_gain: 0,
         bot_accumulated_progress: 0,
         bot_running_until: null,
+        bot_session_runtime_minutes: null,
         last_free_run_at: null,
         subscription_expiry: null,
         bot_items_per_hour_level: 0,
@@ -528,6 +530,7 @@ export class HuntBotService {
       monthly_power_gain: data.monthly_power_gain || 0,
       bot_accumulated_progress: data.bot_accumulated_progress || 0,
       bot_running_until: data.bot_running_until || null,
+      bot_session_runtime_minutes: data.bot_session_runtime_minutes || null,
       last_free_run_at: data.last_free_run_at || null,
       subscription_expiry: data.subscription_expiry || null,
       bot_items_per_hour_level: data.bot_items_per_hour_level || 0,

@@ -89,7 +89,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center p-6">
       {/* Header with User Info */}
-      <div className="w-full max-w-4xl mb-8 flex justify-between items-center">
+      <div className="sticky top-0 z-50 bg-[#050505] w-full max-w-4xl mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
         <Link
           href="/"
           className="px-4 py-2 text-sm hover:opacity-80"
@@ -102,20 +102,20 @@ export default function CommunityPage() {
           ← BACK
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {avatarUrl && (
             <img
               src={avatarUrl}
               alt="Profile"
-              className="w-10 h-10 rounded-full border-2"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2"
               style={{ borderColor: "#00ffff" }}
             />
           )}
           <span
-            className="text-cyan-400 font-mono"
+            className="text-cyan-400 font-mono truncate max-w-[150px] sm:max-w-none"
             style={{
               fontFamily: "'Press Start 2P', cursive",
-              fontSize: "0.75rem",
+              fontSize: "0.65rem",
             }}
           >
             @{instagramUsername}
@@ -125,7 +125,7 @@ export default function CommunityPage() {
 
       {/* Title */}
       <h1
-        className="text-3xl md:text-5xl font-bold mb-12 text-center"
+        className="text-2xl sm:text-3xl md:text-3xl font-bold mb-8 sm:mb-12 text-center"
         style={{
           fontFamily: "'Press Start 2P', cursive",
           color: "#ff00ff",
@@ -136,7 +136,7 @@ export default function CommunityPage() {
       </h1>
 
       {/* Community Links Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-4xl px-2">
         {linksLoading ? (
           <div className="col-span-full text-center py-12">
             <div className="text-cyan-400 font-mono text-xl animate-pulse">
@@ -172,43 +172,43 @@ export default function CommunityPage() {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block p-5 border-2 hover:bg-[#1a1a2e] transition-all hover:scale-105 group"
+              className="block p-3 sm:p-5 border-2 hover:bg-[#1a1a2e] transition-all hover:scale-105 group"
               style={{
                 borderColor: "#00ffff",
                 boxShadow: "0 0 10px rgba(0, 255, 255, 0.2)",
               }}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div
-                  className="w-14 h-14 flex items-center justify-center text-3xl bg-black/50 border border-cyan-500/30 rounded-lg group-hover:border-cyan-400 transition-colors"
+                  className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center text-xl sm:text-3xl bg-black/50 border border-cyan-500/30 rounded-lg group-hover:border-cyan-400 transition-colors shrink-0"
                   style={{
                     fontFamily: "'Press Start 2P', cursive",
                   }}
                 >
                   {link.icon_emoji || "🔗"}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3
-                    className="font-bold mb-1"
+                    className="font-bold mb-1 truncate"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       color: "#00ffff",
-                      fontSize: "0.9rem",
+                      fontSize: "0.75rem",
                     }}
                   >
                     {link.name}
                   </h3>
                   {link.description && (
                     <p
-                      className="text-gray-400 font-mono text-xs"
-                      style={{ fontSize: "0.65rem" }}
+                      className="text-gray-400 font-mono text-xs truncate"
+                      style={{ fontSize: "0.6rem" }}
                     >
                       {link.description}
                     </p>
                   )}
                 </div>
                 <div
-                  className="text-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-lg sm:text-xl opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   style={{ color: "#00ffff" }}
                 >
                   →

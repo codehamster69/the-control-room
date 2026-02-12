@@ -66,6 +66,34 @@
 - [x] Compact power display on mobile
 - [x] User rank section optimized for mobile
 
+### 10. Mobile Responsiveness - All Pages
+
+- [x] Added max-w-md mx-auto container to layout.tsx for mobile-first design
+- [x] Updated app/page.tsx with responsive header (flex-col sm:flex-row, truncate username)
+- [x] Updated app/hunt/page.tsx with responsive header sizing
+- [x] Updated app/armory/page.tsx with px-2 sm:px-0 padding
+- [x] Updated app/leaderboard/page.tsx with px-2 sm:px-0 padding
+- [x] Updated app/community/page.tsx with responsive header, title sizing, and link cards
+- [x] Updated app/profile/[id]/page.tsx with responsive stats, avatars, and grid layouts
+- [x] All pages now use responsive text sizes (text-xs sm:text-sm, etc.)
+- [x] Grid layouts use responsive columns (grid-cols-2 sm:grid-cols-4, etc.)
+
+### 11. Cool Mobile Border Styling
+
+- [x] Phone frame container with full border (not just left/right)
+- [x] Gradient border effect (cyan → magenta → cyan → magenta) using border-image
+- [x] Corner accent decorations (cyan top corners, fuchsia bottom corners)
+- [x] Enhanced glow effects with multiple box-shadow layers
+- [x] Added `borderRadius: '24px'` for smooth rounded phone-like corners
+- [x] Body centered with `h-screen flex items-center justify-center`
+- [x] Phone frame has fixed height `h-[95vh]` for realistic mobile proportions
+- [x] Inner glow border effect for depth
+- [x] Scrollable content area with `overflow-y-auto` inside the phone frame
+- [x] Body has `overflow-hidden` to prevent background scroll
+- [x] Custom scrollbar styling with cyberpunk gradient (cyan → magenta)
+- [x] Thin scrollbar (6px width) with rounded track and thumb
+- [x] Dark scrollbar track (#1a1a1a) matching the theme
+
 ## Files Modified
 
 ### Components

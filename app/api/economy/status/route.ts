@@ -33,6 +33,17 @@ export async function GET(request: NextRequest) {
     // Get hunt bot status
     const huntService = createHuntBotService(supabase, user.id);
     const botStatus = await huntService.getBotStatus();
+    
+    // DEBUG: Log bot status details
+    console.log('DEBUG - Bot Status:', {
+      isRunning: botStatus.isRunning,
+      progressPercent: botStatus.progressPercent,
+      remainingMinutes: botStatus.remainingMinutes,
+      effectiveRate: botStatus.effectiveRate,
+      accumulatedProgress: botStatus.accumulatedProgress,
+      freeRunAvailable: botStatus.freeRunAvailable,
+      cooldownRemaining: botStatus.cooldownRemaining,
+    });
 
     // Get upgrade status
     const upgradeService = createUpgradeService(supabase, user.id);
@@ -132,8 +143,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error('ERROR in /api/economy/status:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Internal server error', details: String(error) },
       { status: 500 }
     );
   }

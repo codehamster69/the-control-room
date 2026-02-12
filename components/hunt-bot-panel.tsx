@@ -109,26 +109,33 @@ export function HuntBotPanel() {
   );
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const loadStatus = useCallback(async () => {
     try {
+      setErrorMessage(null);
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
+        setErrorMessage("Not authenticated");
         return;
       }
 
       const response = await fetch("/api/economy/status");
-
       const result = await response.json();
 
       if (result.success) {
         setEconomyState(result.data.user_state);
         setBotStatus(result.data.bot);
         setUpgradeStatus(result.data.upgrades);
+      } else {
+        setErrorMessage(
+          result.error || result.details || "Failed to load economy data",
+        );
       }
     } catch (error) {
-      // Silently handle error
+      setErrorMessage(String(error) || "Network error");
     } finally {
       setLoading(false);
     }
@@ -257,8 +264,8 @@ export function HuntBotPanel() {
   if (!economyState || !botStatus) {
     return (
       <div className="flex items-center justify-center min-h-[200px] flex-col gap-2">
-        <div className="text-red-400 font-mono">
-          Failed to load economy data
+        <div className="text-red-400 font-mono text-center px-4">
+          {errorMessage || "Failed to load economy data"}
         </div>
         <button
           onClick={loadStatus}
@@ -428,7 +435,7 @@ export function HuntBotPanel() {
             >
               {isRunning ? "🔴 HUNT IN PROGRESS" : "⚪ HUNT BOT IDLE"}
             </h3>
-            {isRunning && economyState.bot_running_until ? (
+            {isRunning && botStatus ? (
               <div>
                 <div className="mb-2">
                   <div
@@ -437,21 +444,14 @@ export function HuntBotPanel() {
                   >
                     <span style={{ color: "#00ff00" }}>Progress</span>
                     <span style={{ color: "#00ff00" }}>
-                      {Math.floor(
-                        ((now -
-                          (economyState.bot_running_until -
-                            paidRuntimeMinutes * 60 * 1000)) /
-                          (paidRuntimeMinutes * 60 * 1000)) *
-                          100,
-                      )}
-                      %
+                      {Math.floor(botStatus.progress_percent)}%
                     </span>
                   </div>
                   <div className="h-2 bg-gray-800 rounded overflow-hidden">
                     <div
                       className="h-full bg-green-500 transition-all duration-1000"
                       style={{
-                        width: `${Math.min(100, Math.floor(((now - (economyState.bot_running_until - paidRuntimeMinutes * 60 * 1000)) / (paidRuntimeMinutes * 60 * 1000)) * 100))}%`,
+                        width: `${Math.min(100, Math.max(0, botStatus.progress_percent))}%`,
                       }}
                     />
                   </div>
@@ -460,13 +460,7 @@ export function HuntBotPanel() {
                   className="text-xs text-gray-400"
                   style={{ fontFamily: "'Press Start 2P', cursive" }}
                 >
-                  {Math.max(
-                    0,
-                    Math.ceil(
-                      (economyState.bot_running_until - now) / (60 * 1000),
-                    ),
-                  )}{" "}
-                  min remaining
+                  {botStatus.remaining_minutes} min remaining
                 </p>
               </div>
             ) : (

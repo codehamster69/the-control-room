@@ -249,7 +249,7 @@ export function LeaderboardView() {
   return (
     <div className="p-4 md:p-6">
       {/* Header */}
-      <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
+      <div className="sticky top-0 z-50 bg-[#050505] mb-4 flex justify-between items-center flex-wrap gap-4">
         <h1
           style={{
             fontFamily: "'Press Start 2P', cursive",

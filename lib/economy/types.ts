@@ -24,6 +24,7 @@ export interface UserEconomyState {
   // Hunt Bot State
   bot_accumulated_progress: number; // Fractional item accumulation
   bot_running_until: number | null; // Unix timestamp when bot completes
+  bot_session_runtime_minutes: number | null; // Actual runtime of current session
   last_free_run_at: number | null; // Unix timestamp of last free run
   
   // Upgrade Levels

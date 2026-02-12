@@ -199,9 +199,9 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center p-6">
         {/* Header */}
-        <div className="w-full max-w-4xl flex justify-between items-center mb-8">
+        <div className="sticky top-0 z-50 bg-[#050505] w-full flex flex-col justify-between items-center mb-8 gap-4">
           <h1
-            className="text-xl md:text-3xl font-bold"
+            className="text-lg sm:text-xl md:text-2xl font-bold text-center sm:text-left"
             style={{
               fontFamily: "'Press Start 2P', cursive",
               color: "#ff00ff",
@@ -220,16 +220,16 @@ export default function HomePage() {
                 <img
                   src={profile.avatar_url}
                   alt="Profile"
-                  className="w-10 h-10 rounded-full border-2"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2"
                   style={{ borderColor: "#00ffff" }}
                 />
               )}
               <div className="text-right">
                 <div
-                  className="text-cyan-400 font-mono"
+                  className="text-cyan-400 font-mono truncate max-w-[120px] sm:max-w-none"
                   style={{
                     fontFamily: "'Press Start 2P', cursive",
-                    fontSize: "0.75rem",
+                    fontSize: "0.65rem",
                   }}
                 >
                   @{profile?.instagram_username}
@@ -562,9 +562,9 @@ export default function HomePage() {
           ENTER THE GLITCH
         </p>
 
-        {/* App Description - Updated (removed Gacha) */}
+        {/* App Description - Updated with Hunt Bot */}
         <div
-          className="text-center text-gray-300 font-mono"
+          className="text-center text-gray-300 font-mono px-2"
           style={{
             fontFamily: "'Press Start 2P', cursive",
             fontSize: "0.7rem",
@@ -575,6 +575,22 @@ export default function HomePage() {
             A gamified Instagram community platform featuring:
           </p>
           <div className="flex flex-col gap-2 text-left items-center">
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-4 h-4 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+              <span>Hunt Bot - Auto collect items</span>
+            </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-cyan-500" />
               <span>Track your inventory in the armory</span>
@@ -608,22 +624,54 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Features Preview - Updated (removed Gacha) */}
-        <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
+        {/* Features Preview - Updated with Hunt Bot */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-sm sm:max-w-md px-2">
           <div
-            className="p-4 text-center"
+            className="p-3 sm:p-4 text-center"
+            style={{
+              borderColor: "#ffc800",
+              borderWidth: "1px",
+              borderStyle: "solid",
+            }}
+          >
+            <svg
+              className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            <p
+              className="font-bold"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                fontSize: "0.5rem",
+                color: "#ffc800",
+              }}
+            >
+              HUNT
+            </p>
+          </div>
+          <div
+            className="p-3 sm:p-4 text-center"
             style={{
               borderColor: "#00ffff",
               borderWidth: "1px",
               borderStyle: "solid",
             }}
           >
-            <Users className="w-8 h-8 mx-auto mb-2 text-cyan-500" />
+            <Users className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-cyan-500" />
             <p
               className="font-bold"
               style={{
                 fontFamily: "'Press Start 2P', cursive",
-                fontSize: "0.6rem",
+                fontSize: "0.5rem",
                 color: "#00ffff",
               }}
             >
@@ -631,7 +679,7 @@ export default function HomePage() {
             </p>
           </div>
           <div
-            className="p-4 text-center"
+            className="p-3 sm:p-4 text-center"
             style={{
               borderColor: "#ffff00",
               borderWidth: "1px",
@@ -639,7 +687,7 @@ export default function HomePage() {
             }}
           >
             <svg
-              className="w-8 h-8 mx-auto mb-2 text-yellow-500"
+              className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-yellow-500"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
@@ -649,7 +697,7 @@ export default function HomePage() {
               className="font-bold"
               style={{
                 fontFamily: "'Press Start 2P', cursive",
-                fontSize: "0.6rem",
+                fontSize: "0.5rem",
                 color: "#ffff00",
               }}
             >
@@ -657,7 +705,7 @@ export default function HomePage() {
             </p>
           </div>
           <div
-            className="p-4 text-center"
+            className="p-3 sm:p-4 text-center"
             style={{
               borderColor: "#00ff00",
               borderWidth: "1px",
@@ -665,7 +713,7 @@ export default function HomePage() {
             }}
           >
             <svg
-              className="w-8 h-8 mx-auto mb-2 text-green-500"
+              className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -681,7 +729,7 @@ export default function HomePage() {
               className="font-bold"
               style={{
                 fontFamily: "'Press Start 2P', cursive",
-                fontSize: "0.6rem",
+                fontSize: "0.5rem",
                 color: "#00ff00",
               }}
             >
