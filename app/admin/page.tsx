@@ -341,8 +341,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-cyan-400 font-mono text-2xl animate-pulse">
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div
+          className="text-cyan-400 font-mono text-sm sm:text-base animate-pulse"
+          style={{ fontFamily: '"Press Start 2P", cursive' }}
+        >
           LOADING...
         </div>
       </div>
@@ -355,30 +358,28 @@ export default function AdminDashboard() {
 
   return (
     <div
-      className="min-h-screen bg-black text-white p-6"
+      className="bg-[#050505] text-white p-3 sm:p-4"
       style={{ fontFamily: '"Press Start 2P", cursive' }}
     >
-      <div
-        className="flex justify-between items-center mb-8 border-2"
-        style={{ borderColor: "#ff00ff" }}
-      >
-        <h1 className="text-2xl p-4" style={{ color: "#ff00ff" }}>
-          [ADMIN_PANEL]
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-[#050505] flex justify-between items-center mb-4 sm:mb-6 border-b border-gray-800 pb-3">
+        <h1 className="text-base sm:text-lg" style={{ color: "#ff00ff" }}>
+          ADMIN
         </h1>
         <Link
           href="/"
-          className="px-4 py-2 border-2 hover:bg-gray-900 transition"
+          className="px-2 sm:px-3 py-1 sm:py-2 text-[10px] sm:text-xs border-2 hover:bg-gray-900 transition"
           style={{ borderColor: "#00ffff" }}
         >
-          BACK TO HOME
+          BACK
         </Link>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-2 mb-4">
         <button
           onClick={() => setActiveTab("items")}
-          className="px-4 py-2 border-2 transition"
+          className="flex-1 px-2 sm:px-4 py-2 text-[10px] sm:text-sm border-2 transition"
           style={{
             borderColor: activeTab === "items" ? "#ffff00" : "#333",
             backgroundColor:
@@ -390,7 +391,7 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("links")}
-          className="px-4 py-2 border-2 transition"
+          className="flex-1 px-2 sm:px-4 py-2 text-[10px] sm:text-sm border-2 transition"
           style={{
             borderColor: activeTab === "links" ? "#00ff00" : "#333",
             backgroundColor:
@@ -398,7 +399,7 @@ export default function AdminDashboard() {
             color: activeTab === "links" ? "#00ff00" : "#666",
           }}
         >
-          COMMUNITY LINKS
+          LINKS
         </button>
       </div>
 
@@ -420,16 +421,24 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "items" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="border-2 p-4" style={{ borderColor: "#ffff00" }}>
-              <h2 className="text-xl mb-4" style={{ color: "#ffff00" }}>
+        <div className="space-y-4">
+          <div>
+            <div
+              className="border-2 p-3 sm:p-4"
+              style={{ borderColor: "#ffff00" }}
+            >
+              <h2
+                className="text-sm sm:text-base mb-3 sm:mb-4"
+                style={{ color: "#ffff00" }}
+              >
                 {isEditing ? "EDIT_ITEM" : "NEW_ITEM"}
               </h2>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm mb-2">NAME</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    NAME
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
@@ -437,32 +446,36 @@ export default function AdminDashboard() {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     required
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">DESCRIPTION</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    DESCRIPTION
+                  </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    placeholder="Item description (shown on hover in armory)..."
-                    rows={3}
-                    className="w-full bg-gray-900 border-2 p-2 text-white text-sm"
+                    placeholder="Item description..."
+                    rows={2}
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">IMAGE</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    IMAGE
+                  </label>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    className="w-full bg-gray-900 border-2 p-2 text-white text-sm"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                   {uploading && (
@@ -473,7 +486,7 @@ export default function AdminDashboard() {
                       <img
                         src={formData.image_url}
                         alt="Preview"
-                        className="w-20 h-20 object-cover border-2"
+                        className="w-16 h-16 object-cover border-2"
                         style={{ borderColor: "#00ff00" }}
                       />
                       <button
@@ -481,16 +494,18 @@ export default function AdminDashboard() {
                         onClick={() =>
                           setFormData({ ...formData, image_url: "" })
                         }
-                        className="text-red-400 text-xs mt-1 hover:underline"
+                        className="text-red-400 text-xs mt-1 hover:underline block"
                       >
-                        Remove image
+                        Remove
                       </button>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">RARITY</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    RARITY
+                  </label>
                   <select
                     value={formData.rarity}
                     onChange={(e) =>
@@ -499,7 +514,7 @@ export default function AdminDashboard() {
                         rarity: e.target.value,
                       })
                     }
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   >
                     {rarities.map((rarity) => (
@@ -511,7 +526,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">SCORE VALUE</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    SCORE VALUE
+                  </label>
                   <input
                     type="number"
                     value={formData.score_value}
@@ -523,7 +540,7 @@ export default function AdminDashboard() {
                     }
                     min="1"
                     required
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
@@ -532,7 +549,7 @@ export default function AdminDashboard() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition disabled:opacity-50"
+                    className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition disabled:opacity-50 text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   >
                     {isEditing ? "UPDATE" : "CREATE"}
@@ -550,7 +567,7 @@ export default function AdminDashboard() {
                           image_url: "",
                         });
                       }}
-                      className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition"
+                      className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition text-xs sm:text-sm"
                       style={{ borderColor: "#ff00ff" }}
                     >
                       CANCEL
@@ -561,46 +578,47 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="border-2 p-4" style={{ borderColor: "#ff00ff" }}>
-              <h2 className="text-xl mb-4" style={{ color: "#ff00ff" }}>
-                ITEMS_DATABASE
+          <div>
+            <div
+              className="border-2 p-3 sm:p-4"
+              style={{ borderColor: "#ff00ff" }}
+            >
+              <h2
+                className="text-sm sm:text-base mb-3 sm:mb-4"
+                style={{ color: "#ff00ff" }}
+              >
+                ITEMS ({items.length})
               </h2>
 
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 max-h-[400px] overflow-y-auto">
                 {items.length === 0 ? (
-                  <p style={{ color: "#ff00ff" }}>NO_ITEMS_FOUND</p>
+                  <p style={{ color: "#ff00ff" }}>NO_ITEMS</p>
                 ) : (
                   items.map((item) => (
                     <div
                       key={item.id}
-                      className="border-2 p-3 hover:bg-gray-900 transition"
+                      className="border-2 p-2 sm:p-3 hover:bg-gray-900 transition"
                       style={{ borderColor: getRarityColor(item.rarity) }}
                     >
-                      <div className="flex gap-4">
+                      <div className="flex gap-2 sm:gap-3">
                         {item.image_url && (
                           <img
                             src={item.image_url}
                             alt={item.name}
-                            className="w-16 h-16 object-cover flex-shrink-0"
+                            className="w-10 h-10 sm:w-12 sm:h-12 object-cover flex-shrink-0"
                           />
                         )}
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <div className="min-w-0">
                               <h3
-                                className="font-bold text-sm"
+                                className="font-bold text-xs sm:text-sm truncate"
                                 style={{ color: getRarityColor(item.rarity) }}
                               >
                                 {item.name}
                               </h3>
-                              {item.description && (
-                                <p className="text-xs mt-1 text-gray-400">
-                                  {item.description}
-                                </p>
-                              )}
                             </div>
-                            <div className="text-xs ml-4 text-right">
+                            <div className="text-[10px] sm:text-xs ml-2 text-right shrink-0">
                               <span
                                 style={{ color: getRarityColor(item.rarity) }}
                               >
@@ -613,20 +631,20 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex gap-1 sm:gap-2 mt-2">
                             <button
                               onClick={() => handleEdit(item)}
-                              className="flex-1 text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
+                              className="flex-1 text-[10px] sm:text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
                               style={{ borderColor: "#00ffff" }}
                             >
                               EDIT
                             </button>
                             <button
                               onClick={() => handleDelete(item.id)}
-                              className="flex-1 text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
+                              className="flex-1 text-[10px] sm:text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
                               style={{ borderColor: "#ff0000" }}
                             >
-                              DELETE
+                              DEL
                             </button>
                           </div>
                         </div>
@@ -641,16 +659,27 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "links" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="border-2 p-4" style={{ borderColor: "#00ff00" }}>
-              <h2 className="text-xl mb-4" style={{ color: "#00ff00" }}>
+        <div className="space-y-4">
+          <div>
+            <div
+              className="border-2 p-3 sm:p-4"
+              style={{ borderColor: "#00ff00" }}
+            >
+              <h2
+                className="text-sm sm:text-base mb-3 sm:mb-4"
+                style={{ color: "#00ff00" }}
+              >
                 {isEditingLink ? "EDIT_LINK" : "NEW_LINK"}
               </h2>
 
-              <form onSubmit={handleLinkSubmit} className="space-y-4">
+              <form
+                onSubmit={handleLinkSubmit}
+                className="space-y-3 sm:space-y-4"
+              >
                 <div>
-                  <label className="block text-sm mb-2">NAME</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    NAME
+                  </label>
                   <input
                     type="text"
                     value={linkFormData.name}
@@ -658,14 +687,16 @@ export default function AdminDashboard() {
                       setLinkFormData({ ...linkFormData, name: e.target.value })
                     }
                     required
-                    placeholder="e.g., Instagram Group Chat"
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    placeholder="Group name"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">URL</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    URL
+                  </label>
                   <input
                     type="url"
                     value={linkFormData.url}
@@ -674,13 +705,15 @@ export default function AdminDashboard() {
                     }
                     required
                     placeholder="https://..."
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">ICON EMOJI</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    ICON
+                  </label>
                   <input
                     type="text"
                     value={linkFormData.icon_emoji}
@@ -691,13 +724,15 @@ export default function AdminDashboard() {
                       })
                     }
                     placeholder="🔗"
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2">DESCRIPTION</label>
+                  <label className="block text-xs sm:text-sm mb-1 sm:mb-2">
+                    DESC
+                  </label>
                   <textarea
                     value={linkFormData.description}
                     onChange={(e) =>
@@ -706,9 +741,9 @@ export default function AdminDashboard() {
                         description: e.target.value,
                       })
                     }
-                    placeholder="Optional description..."
-                    rows={3}
-                    className="w-full bg-gray-900 border-2 p-2 text-white"
+                    placeholder="Description..."
+                    rows={2}
+                    className="w-full bg-gray-900 border-2 p-2 text-white text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   />
                 </div>
@@ -717,7 +752,7 @@ export default function AdminDashboard() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition disabled:opacity-50"
+                    className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition disabled:opacity-50 text-xs sm:text-sm"
                     style={{ borderColor: "#00ffff" }}
                   >
                     {isEditingLink ? "UPDATE" : "CREATE"}
@@ -734,7 +769,7 @@ export default function AdminDashboard() {
                           description: "",
                         });
                       }}
-                      className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition"
+                      className="flex-1 bg-gray-900 border-2 p-2 hover:bg-gray-800 transition text-xs sm:text-sm"
                       style={{ borderColor: "#ff00ff" }}
                     >
                       CANCEL
@@ -745,80 +780,77 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="border-2 p-4" style={{ borderColor: "#00ffff" }}>
-              <h2 className="text-xl mb-4" style={{ color: "#00ffff" }}>
-                COMMUNITY_LINKS
+          <div>
+            <div
+              className="border-2 p-3 sm:p-4"
+              style={{ borderColor: "#00ffff" }}
+            >
+              <h2
+                className="text-sm sm:text-base mb-3 sm:mb-4"
+                style={{ color: "#00ffff" }}
+              >
+                LINKS ({communityLinks.length})
               </h2>
 
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 max-h-[400px] overflow-y-auto">
                 {communityLinks.length === 0 ? (
-                  <p style={{ color: "#00ffff" }}>NO_LINKS_FOUND</p>
+                  <p style={{ color: "#00ffff" }}>NO_LINKS</p>
                 ) : (
                   communityLinks.map((link) => (
                     <div
                       key={link.id}
-                      className="border-2 p-3 hover:bg-gray-900 transition"
+                      className="border-2 p-2 sm:p-3 hover:bg-gray-900 transition"
                       style={{
                         borderColor: link.is_active ? "#00ff00" : "#666",
                       }}
                     >
-                      <div className="flex gap-4 items-center">
+                      <div className="flex gap-2 sm:gap-3 items-center">
                         <div
-                          className="w-12 h-12 flex items-center justify-center text-2xl bg-gray-800 border-2"
+                          className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-lg sm:text-xl bg-gray-800 border-2 shrink-0"
                           style={{ borderColor: "#333" }}
                         >
                           {link.icon_emoji || "🔗"}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start">
-                            <div>
+                            <div className="min-w-0">
                               <h3
-                                className="font-bold text-sm"
+                                className="font-bold text-xs sm:text-sm truncate"
                                 style={{
                                   color: link.is_active ? "#00ff00" : "#666",
                                 }}
                               >
                                 {link.name}
                               </h3>
-                              {link.description && (
-                                <p className="text-xs mt-1 text-gray-400">
-                                  {link.description}
-                                </p>
-                              )}
-                              <p className="text-xs mt-1 text-gray-500 truncate">
+                              <p className="text-[10px] sm:text-xs text-gray-500 truncate">
                                 {link.url}
                               </p>
                             </div>
-                            <div className="text-xs ml-4 text-right">
+                            <div className="text-[10px] sm:text-xs ml-2 text-right shrink-0">
                               <span
                                 style={{
                                   color: link.is_active ? "#00ff00" : "#ff0000",
                                 }}
                               >
-                                {link.is_active ? "ACTIVE" : "INACTIVE"}
-                              </span>
-                              <br />
-                              <span className="text-gray-400">
-                                Order: {link.display_order}
+                                {link.is_active ? "ACTIVE" : "OFF"}
                               </span>
                             </div>
                           </div>
 
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex gap-1 sm:gap-2 mt-2">
                             <button
                               onClick={() => handleEditLink(link)}
-                              className="flex-1 text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
+                              className="flex-1 text-[10px] sm:text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
                               style={{ borderColor: "#00ffff" }}
                             >
                               EDIT
                             </button>
                             <button
                               onClick={() => handleDeleteLink(link.id)}
-                              className="flex-1 text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
+                              className="flex-1 text-[10px] sm:text-xs bg-gray-900 border-2 p-1 hover:bg-gray-800 transition"
                               style={{ borderColor: "#ff0000" }}
                             >
-                              DELETE
+                              DEL
                             </button>
                           </div>
                         </div>

@@ -401,7 +401,9 @@ export class EconomyService {
     const breakdown: { rarity: string; quantity: number; value: number }[] = [];
 
     for (const { item, quantity } of itemsToSell) {
-      const value = calculateSellValue(quantity);
+      // Use each item's score_value instead of fixed sell value
+      const itemValue = item.score_value || 10;
+      const value = itemValue * quantity;
       
       totalItems += quantity;
       totalTokens += value;
@@ -413,10 +415,7 @@ export class EconomyService {
       });
     }
 
-    if (totalItems > state.current_items_owned) {
-      return { success: false, items_sold: 0, tokens_earned: 0, error: 'Not enough items' };
-    }
-
+    // Remove the check since we're getting items from inventory JSON which is the source of truth
     // Update inventory JSON - remove sold items
     const newInventory = { ...state.inventory };
     for (const { itemId } of itemsToSell) {
@@ -486,7 +485,9 @@ export class EconomyService {
 
     for (const [itemId, quantity] of inventoryEntries) {
       const item = allItems.find((i: any) => i.id === itemId);
-      const value = calculateSellValue(quantity);
+      // Use each item's score_value instead of fixed sell value
+      const itemValue = item?.score_value || 10;
+      const value = itemValue * quantity;
       
       totalItems += quantity;
       totalTokens += value;
@@ -499,10 +500,7 @@ export class EconomyService {
       });
     }
 
-    if (totalItems > state.current_items_owned) {
-      return { success: false, items_sold: 0, tokens_earned: 0, error: 'Not enough items' };
-    }
-
+    // Remove the check since we're getting items from inventory JSON which is the source of truth
     // Clear inventory JSON
     const { error } = await this.supabase
       .from('profiles')
