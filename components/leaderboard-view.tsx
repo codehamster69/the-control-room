@@ -254,7 +254,7 @@ export function LeaderboardView() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+            textShadow: "0 0 2px #ff00ff",
             fontSize: "1.2rem",
           }}
         >
@@ -335,7 +335,7 @@ export function LeaderboardView() {
       {/* User's Own Rank - Mobile Optimized */}
       {userRank.entry && (
         <div
-          className="mb-4 p-3 rounded border-2 fixed bottom-0 right-0 left-0"
+          className="mb-4 p-3 rounded border-2 fixed w-md bottom-0 left-[50%] transform -translate-x-[50%]"
           style={{
             borderColor: "#ff00ff",
             backgroundColor: "rgba(255, 0, 255, 0.1)",

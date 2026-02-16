@@ -129,7 +129,7 @@ export default function CommunityPage() {
         style={{
           fontFamily: "'Press Start 2P', cursive",
           color: "#ff00ff",
-          textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+          textShadow: "0 0 2px #ff00ff",
         }}
       >
         COMMUNITY

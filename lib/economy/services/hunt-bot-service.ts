@@ -320,15 +320,15 @@ export class HuntBotService {
       };
     }
 
-    // Define rarity weights (Common is most likely, Mythic is extremely rare)
-    // Exponential drop-off: Common = 100,000x more likely than Mythic
+    // Define rarity weights (Common is most likely, Mythic is rare but achievable)
+    // Adjusted for better accessibility: Legendary 2.5x easier, Mythic 100x easier
     const rarityWeights: Record<string, number> = {
       'Common': 1000,
       'Uncommon': 300,
       'Rare': 50,
       'Epic': 10,
-      'Legendary': 2,
-      'Mythic': 0.01,
+      'Legendary': 5,
+      'Mythic': 1,
     };
 
     // Calculate satellite bonus for rare drops (increases chance of higher rarities)

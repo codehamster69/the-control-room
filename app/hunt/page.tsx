@@ -36,7 +36,7 @@ export default async function HuntPage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#00ff00",
-            textShadow: "0 0 5px #00ff00",
+            textShadow: "0 0 2px #00ff00",
           }}
         >
           HUNT BOT

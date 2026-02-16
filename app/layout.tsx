@@ -58,7 +58,7 @@ export default function RootLayout({
       >
         {/* Phone frame container */}
         <div
-          className="relative w-full max-w-md h-screen overflow-hidden"
+          className="relative w-full max-w-lg h-screen overflow-hidden"
           style={{
             border: "3px solid transparent",
             borderRadius: "24px",

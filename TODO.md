@@ -11,6 +11,16 @@
 - [x] Implemented "sell all" functionality
 - [x] Sell value = item power (score_value)
 
+### 1a. Armory Category Restructure
+
+- [x] Changed tabs from "All, Owned, Not Owned, Collection, Sell" to "INVENTORY, COLLECTION, SELL"
+- [x] INVENTORY tab: Shows only currently owned items with quantities
+- [x] COLLECTION tab: Shows ALL items in the game
+  - Items EVER received (owned or sold): Display with full rarity styling (colorful border/background), image, name, power
+  - Items EVER received show collection quantity (total ever collected, never decreases)
+  - Items NEVER received: Show gray "unrevealed" card with "?" mark, "???" name, "??? PWR"
+- [x] SELL tab: Unchanged - sell interface for owned items
+
 ### 2. Remove Gacha/Spin Feature
 
 - [x] Removed gacha page references from app/page.tsx
@@ -167,3 +177,23 @@ The inventory system now uses JSONB columns instead of separate tables:
 
 - [x] Remove error details exposure from API routes (status, hunt/start)
 - [x] Remove console.error logs from sell API route
+
+### 12. Dialog Close Button Visibility
+
+- [x] Fixed close button styling in dialog component
+- [x] Added circular shape with dark background for contrast
+- [x] White X icon with hover effects (scale, background lighten)
+
+### 13. Adjusted Rarity Drop Rates
+
+- [x] Made Mythic items 100x more likely (0.01 → 1)
+- [x] Made Legendary items 2.5x more likely (2 → 5)
+- [x] New weights: Common(1000), Uncommon(300), Rare(50), Epic(10), Legendary(5), Mythic(1)
+- [x] Mythic now achievable but still rare (1/1366 chance without satellite bonus)
+
+### 14. Reduced Text Shadow Glow (Mobile Clarity)
+
+- [x] Reduced all title text shadows from `0 0 5px #ff00ff, 0 0 8px #00ffff` to `0 0 2px #ff00ff`
+- [x] Fixed blurry text on mobile screens by reducing glow intensity
+- [x] Updated files: app/page.tsx, components/leaderboard-view.tsx, components/armory-grid.tsx, app/hunt/page.tsx, app/community/page.tsx, app/profile/[id]/page.tsx
+- [x] Reduced question mark shadow in armory from `0 0 10px` to `0 0 2px`

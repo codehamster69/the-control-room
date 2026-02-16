@@ -48,7 +48,7 @@ interface UserStats {
   monthly_power_gain: number;
 }
 
-type FilterType = "all" | "owned" | "not-owned" | "collection" | "sell";
+type FilterType = "inventory" | "collection" | "sell";
 
 const rarities = [
   { name: "Common", color: "#9ca3af", bg: "rgba(156, 163, 175, 0.15)" },
@@ -73,7 +73,7 @@ export function ArmoryGrid() {
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterType>("inventory");
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredItem, setHoveredItem] = useState<InventoryItem | null>(null);
   const [selectedItemForDialog, setSelectedItemForDialog] =
@@ -183,16 +183,11 @@ export function ArmoryGrid() {
 
   useEffect(() => {
     let filtered = items;
-    if (filter === "owned")
+    if (filter === "inventory")
       filtered = filtered.filter((item) => item.isUnlocked);
-    else if (filter === "not-owned")
-      filtered = filtered.filter((item) => !item.isUnlocked);
-    else if (filter === "collection")
-      filtered = filtered.filter(
-        (item) => item.wasCollected || item.isUnlocked,
-      );
     else if (filter === "sell")
       filtered = filtered.filter((item) => item.isUnlocked);
+    // collection shows all items, no filter needed
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -364,7 +359,7 @@ export function ArmoryGrid() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+            textShadow: "0 0 2px #ff00ff",
             fontSize: "1.2rem",
           }}
         >
@@ -438,9 +433,7 @@ export function ArmoryGrid() {
 
       <div className="mb-3 flex flex-wrap gap-2">
         <div className="flex border-2" style={{ borderColor: "#333" }}>
-          {(
-            ["all", "owned", "not-owned", "collection", "sell"] as FilterType[]
-          ).map((f) => (
+          {(["inventory", "collection", "sell"] as FilterType[]).map((f) => (
             <button
               key={f}
               onClick={() => {
@@ -461,15 +454,11 @@ export function ArmoryGrid() {
                 borderWidth: "1px",
               }}
             >
-              {f === "all"
-                ? "ALL"
-                : f === "owned"
-                  ? "OWNED"
-                  : f === "not-owned"
-                    ? "NOT"
-                    : f === "collection"
-                      ? "COLLECTION"
-                      : "SELL"}
+              {f === "inventory"
+                ? "INVENTORY"
+                : f === "collection"
+                  ? "COLLECTION"
+                  : "SELL"}
             </button>
           ))}
         </div>
@@ -737,8 +726,8 @@ export function ArmoryGrid() {
               color: "#ffff00",
             }}
           >
-            Showing all items ever collected (including sold items). Collection
-            progress: {collectionCount}/{totalCount}
+            Collection shows all items. Unrevealed cards (?) are items you
+            haven&apos;t unlocked yet. Progress: {collectionCount}/{totalCount}
           </p>
         </div>
       )}
@@ -764,27 +753,26 @@ export function ArmoryGrid() {
                 className={`relative overflow-hidden border-2 cursor-pointer transition-all ${selectedItemId === item.id && filter === "sell" ? "ring-2 ring-green-400" : ""}`}
                 style={{
                   padding: "8px",
-                  borderColor: (
+                  borderColor:
                     filter === "collection"
                       ? item.wasCollected || item.isUnlocked
+                        ? rarity.color
+                        : "#444444"
                       : item.isUnlocked
-                  )
-                    ? rarity.color
-                    : "#333333",
-                  backgroundColor: (
+                        ? rarity.color
+                        : "#333333",
+                  backgroundColor:
                     filter === "collection"
                       ? item.wasCollected || item.isUnlocked
+                        ? rarity.bg
+                        : "rgba(30, 30, 30, 0.9)"
                       : item.isUnlocked
-                  )
-                    ? rarity.bg
-                    : "rgba(20, 20, 20, 0.8)",
-                  boxShadow: (
-                    filter === "collection"
-                      ? item.wasCollected || item.isUnlocked
-                      : item.isUnlocked
-                  )
-                    ? `0 0 8px ${rarity.color}`
-                    : "none",
+                        ? rarity.bg
+                        : "rgba(20, 20, 20, 0.8)",
+                  boxShadow:
+                    item.wasCollected || item.isUnlocked
+                      ? `0 0 8px ${rarity.color}`
+                      : "none",
                 }}
                 onMouseEnter={() => setHoveredItem(item)}
                 onMouseLeave={() => setHoveredItem(null)}
@@ -796,24 +784,36 @@ export function ArmoryGrid() {
                   ) {
                     setSelectedItemId(item.id);
                     setSellAmount(1);
-                  } else {
+                  } else if (
+                    filter !== "collection" ||
+                    item.wasCollected ||
+                    item.isUnlocked
+                  ) {
                     setSelectedItemForDialog(item);
                     setIsDialogOpen(true);
                   }
                 }}
               >
                 <div className="w-14 h-14 flex items-center justify-center mx-auto mb-2">
-                  {item.image_url ? (
+                  {filter === "collection" &&
+                  !(item.wasCollected || item.isUnlocked) ? (
+                    // Unrevealed card - show question mark for never received items
+                    <div
+                      className="text-4xl font-bold"
+                      style={{
+                        color: "#666666",
+                        textShadow: "0 0 2px rgba(100, 100, 100, 0.3)",
+                      }}
+                    >
+                      ?
+                    </div>
+                  ) : item.image_url ? (
                     <img
                       src={item.image_url}
                       alt={item.name}
                       className="max-w-full max-h-full object-contain"
                       style={{
-                        filter: (
-                          filter === "collection"
-                            ? item.wasCollected || item.isUnlocked
-                            : item.isUnlocked
-                        )
+                        filter: item.isUnlocked
                           ? "none"
                           : "grayscale(100%) brightness(0.4)",
                       }}
@@ -822,13 +822,7 @@ export function ArmoryGrid() {
                     <div
                       className="text-3xl"
                       style={{
-                        color: (
-                          filter === "collection"
-                            ? item.wasCollected || item.isUnlocked
-                            : item.isUnlocked
-                        )
-                          ? rarity.color
-                          : "#444444",
+                        color: item.isUnlocked ? rarity.color : "#444444",
                       }}
                     >
                       □
@@ -839,66 +833,58 @@ export function ArmoryGrid() {
                   className="text-center text-[8px] truncate px-1"
                   style={{
                     fontFamily: "'Press Start 2P', cursive",
-                    color: (
-                      filter === "collection"
-                        ? item.wasCollected || item.isUnlocked
+                    color:
+                      filter === "collection" &&
+                      !(item.wasCollected || item.isUnlocked)
+                        ? "#666666"
                         : item.isUnlocked
-                    )
-                      ? rarity.color
-                      : "#555555",
+                          ? rarity.color
+                          : "#555555",
                   }}
                 >
-                  {item.name}
+                  {filter === "collection" &&
+                  !(item.wasCollected || item.isUnlocked)
+                    ? "???"
+                    : item.name}
                 </div>
                 <div className="flex justify-between items-center mt-2 px-1">
                   <span
                     className="text-[9px]"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
-                      color: (
-                        filter === "collection"
-                          ? item.wasCollected || item.isUnlocked
-                          : item.isUnlocked
-                      )
-                        ? "#cccccc"
-                        : "#444444",
+                      color: item.isUnlocked ? "#cccccc" : "#444444",
                     }}
                   >
-                    {filter === "collection" && item.wasCollected
-                      ? `x${item.collectionQuantity || 0}`
-                      : item.isUnlocked
+                    {filter === "inventory" || filter === "sell"
+                      ? item.isUnlocked
                         ? `x${item.quantity}`
-                        : "x0"}
+                        : "x0"
+                      : filter === "collection"
+                        ? item.wasCollected || item.isUnlocked
+                          ? `x${item.collectionQuantity || item.quantity}`
+                          : "???"
+                        : item.isUnlocked
+                          ? `x${item.quantity}`
+                          : "x0"}
                   </span>
-                  {filter === "collection" &&
-                    item.wasCollected &&
-                    !item.isUnlocked && (
-                      <span
-                        className="text-[7px] px-1 py-0.5 rounded"
-                        style={{
-                          fontFamily: "'Press Start 2P', cursive",
-                          backgroundColor: "#666",
-                          color: "#fff",
-                        }}
-                      >
-                        SOLD
-                      </span>
-                    )}
                 </div>
                 <div
                   className="text-[7px] text-center mt-1"
                   style={{
                     fontFamily: "'Press Start 2P', cursive",
-                    color: (
-                      filter === "collection"
-                        ? item.wasCollected || item.isUnlocked
+                    color:
+                      filter === "collection" &&
+                      !(item.wasCollected || item.isUnlocked)
+                        ? "#555555"
                         : item.isUnlocked
-                    )
-                      ? rarity.color
-                      : "#444444",
+                          ? rarity.color
+                          : "#444444",
                   }}
                 >
-                  {item.score_value} POWER
+                  {filter === "collection" &&
+                  !(item.wasCollected || item.isUnlocked)
+                    ? "??? PWR"
+                    : `${item.score_value} POWER`}
                 </div>
                 {hoveredItem?.id === item.id && item.description && (
                   <div
@@ -930,10 +916,12 @@ export function ArmoryGrid() {
             }}
           >
             {filter === "collection"
-              ? "NO ITEMS COLLECTED YET"
+              ? "NO ITEMS IN COLLECTION"
               : filter === "sell"
                 ? "NO ITEMS TO SELL"
-                : "NO ITEMS FOUND"}
+                : filter === "inventory"
+                  ? "NO ITEMS IN INVENTORY"
+                  : "NO ITEMS FOUND"}
           </p>
         </div>
       )}
@@ -942,19 +930,19 @@ export function ArmoryGrid() {
         className="mt-3 text-[8px] text-gray-500 text-center"
         style={{ fontFamily: "'Press Start 2P', cursive" }}
       >
-        {filter === "not-owned"
-          ? "Not in inventory yet"
-          : filter === "collection"
-            ? "Hover over items to see descriptions"
-            : filter === "sell"
-              ? "Select items to sell them for berries"
+        {filter === "collection"
+          ? "Unrevealed cards (?) are items you haven't unlocked yet"
+          : filter === "sell"
+            ? "Select items to sell them for berries"
+            : filter === "inventory"
+              ? "Your current inventory"
               : "Your item collection"}
       </p>
 
       {/* Item Detail Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent
-          className="border-2 max-w-sm"
+          className="border-2 max-w-md"
           style={{
             borderColor: selectedItemForDialog
               ? rarities.find(

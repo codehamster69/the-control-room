@@ -205,7 +205,7 @@ export default function HomePage() {
             style={{
               fontFamily: "'Press Start 2P', cursive",
               color: "#ff00ff",
-              textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+              textShadow: "0 0 2px #ff00ff",
             }}
           >
             THE CONTROL ROOM
@@ -474,7 +474,7 @@ export default function HomePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+            textShadow: "0 0 2px #ff00ff",
           }}
         >
           VERIFY INSTAGRAM
@@ -545,7 +545,7 @@ export default function HomePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#ff00ff",
-            textShadow: "0 0 5px #ff00ff, 0 0 8px #00ffff",
+            textShadow: "0 0 2px #ff00ff",
           }}
         >
           THE CONTROL ROOM
@@ -556,7 +556,7 @@ export default function HomePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#00ffff",
-            textShadow: "0 0 10px #00ffff",
+            textShadow: "0 0 2px #00ffff",
           }}
         >
           ENTER THE GLITCH

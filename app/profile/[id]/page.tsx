@@ -305,7 +305,7 @@ export default function ProfilePage() {
           style={{
             fontFamily: "'Press Start 2P', cursive",
             color: "#00ffff",
-            textShadow: "0 0 10px #00ffff",
+            textShadow: "0 0 2px #00ffff",
           }}
         >
           @{profile.instagram_username}
