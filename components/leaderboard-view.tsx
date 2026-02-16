@@ -335,7 +335,7 @@ export function LeaderboardView() {
       {/* User's Own Rank - Mobile Optimized */}
       {userRank.entry && (
         <div
-          className="mb-4 p-3 rounded border-2 fixed w-md bottom-0 left-[50%] transform -translate-x-[50%]"
+          className="mb-4 p-3 rounded border-2 fixed w-sm bottom-0 left-[50%] transform -translate-x-[50%]"
           style={{
             borderColor: "#ff00ff",
             backgroundColor: "rgba(255, 0, 255, 0.1)",
