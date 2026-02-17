@@ -28,6 +28,8 @@ import {
   MAX_SATELLITE_LEVEL,
   MIN_COST_PER_HOUR,
   MAX_COST_PER_HOUR_LEVEL,
+  MAX_RUNTIME_LEVEL,
+  MAX_BOT_LEVEL,
 } from '../constants';
 
 export class UpgradeService {
@@ -73,8 +75,8 @@ export class UpgradeService {
     const state = await this.getUserState();
 
     // Calculate max levels
-    const botMaxLevel = MAX_ITEMS_PER_HOUR - BASE_ITEMS_PER_HOUR; // 60 - 15 = 45 levels
-    const runtimeMaxLevel = 100; // Approximate max level for runtime (reaches 1440 min)
+    const botMaxLevel = MAX_BOT_LEVEL; // 45 levels (15 to 60 items/hr)
+    const runtimeMaxLevel = MAX_RUNTIME_LEVEL; // 100 levels (reaches 24 hours)
     const satelliteMaxLevel = MAX_SATELLITE_LEVEL; // 1000
     const costPerHourMaxLevel = MAX_COST_PER_HOUR_LEVEL; // 100
 
@@ -259,7 +261,7 @@ export class UpgradeService {
         success: false,
         upgrade_type: 'satellite',
         tokens_spent: 0,
-        error: `Maximum satellite level reached (${MAX_SATELLITE_LEVEL} = ${(MAX_SATELLITE_LEVEL * 3 / 100).toFixed(1)}% rare drop bonus).`,
+        error: `Maximum satellite level reached (${MAX_SATELLITE_LEVEL} = ${(MAX_SATELLITE_LEVEL * 10 / 100).toFixed(1)}% rare drop bonus).`,
       };
     }
     

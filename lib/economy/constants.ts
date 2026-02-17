@@ -28,15 +28,16 @@ export const FREE_RUN_COOLDOWN_HOURS = 5;
 // ============================================================================
 
 export const BOT_UPGRADE_BASE_COST = 100;
-export const BOT_UPGRADE_GROWTH_RATE = 1.8;
+export const BOT_UPGRADE_GROWTH_RATE = 1.15; // Reduced from 1.8 for affordability
 export const MAX_ITEMS_PER_HOUR = 60; // Hard cap at 60 items/hour
+export const MAX_BOT_LEVEL = 45; // Max level (60 - 15 = 45 levels to go from 15 to 60 items/hr)
 
 // ============================================================================
 // COST PER HOUR UPGRADE CONSTANTS
 // ============================================================================
 
 export const COST_PER_HOUR_UPGRADE_BASE_COST = 200;
-export const COST_PER_HOUR_UPGRADE_GROWTH_RATE = 1.5;
+export const COST_PER_HOUR_UPGRADE_GROWTH_RATE = 1.06; // Reduced from 1.5 for affordability
 export const MIN_COST_PER_HOUR = 60; // Minimum cost per hour (60 tokens)
 export const MAX_COST_PER_HOUR_LEVEL = 100; // Max upgrade level
 
@@ -45,11 +46,14 @@ export const MAX_COST_PER_HOUR_LEVEL = 100; // Max upgrade level
 // ============================================================================
 
 export const BASE_RUNTIME_MINUTES = 15;
+// Growth rate ~1.045 reaches 1440 minutes at level 100 (15 * 1.045^100 ≈ 1080 min)
+// Slightly higher to ensure we hit 1440 by level 100
+export const RUNTIME_GROWTH_RATE = 1.0467; // Exact rate to reach 1440 min at level 100
 export const MAX_RUNTIME_MINUTES = 24 * 60; // 24 hours = 1440 minutes
-export const RUNTIME_GROWTH_RATE = 1.5;
+export const MAX_RUNTIME_LEVEL = 100; // Max level for runtime upgrade
 
 export const RUNTIME_UPGRADE_BASE_COST = 150;
-export const RUNTIME_UPGRADE_GROWTH = 2.0;
+export const RUNTIME_UPGRADE_GROWTH = 1.05; // Reduced from 1.15 for affordability
 
 // Runtime cost per minute (configurable)
 export const RUNTIME_COST_PER_MINUTE = 1; // Base cost per minute of runtime
@@ -58,19 +62,17 @@ export const RUNTIME_COST_PER_MINUTE = 1; // Base cost per minute of runtime
 // SATELLITE SYSTEM CONSTANTS
 // ============================================================================
 
-// Satellite is VERY expensive - reaching 30% should take years
-// Level 1000 = ~30% rare drop bonus (1000 * 0.03% = 30%)
-// Cost grows exponentially: 1000 * (3.5 ^ level)
-// Level 100 costs ~10^54 tokens (effectively impossible)
-// Level 50 costs ~10^27 tokens (still impossible)
-// Level 30 costs ~10^15 tokens (millions of billions)
-// Level 20 costs ~10^10 tokens (10 billion)
-// Level 10 costs ~10^5 tokens (100K)
-// Level 5 costs ~10^3 tokens (1K)
+// Satellite bonus system - each level increases rare drop chance
+// Level 300 = ~30% rare drop bonus (max achievable due to internal cap)
+// Cost grows exponentially: base * (growth ^ level)
+// Level 300 costs ~350M tokens (very expensive but achievable for dedicated players)
+// Level 200 costs ~17M tokens
+// Level 100 costs ~1.4M tokens
+// Level 50 costs ~11K tokens
 export const SATELLITE_BASE_COST = 1000;
-export const SATELLITE_GROWTH_RATE = 3.5; // Very steep growth
-export const SATELLITE_INCREMENT_BP = 3; // 0.03% per level (3 basis points)
-export const MAX_SATELLITE_LEVEL = 1000; // Cap at 1000 (30% bonus)
+export const SATELLITE_GROWTH_RATE = 1.10; // Slower growth for 300 levels
+export const SATELLITE_INCREMENT_BP = 10; // 0.1% per level (10 basis points) - reaches cap at level 300
+export const MAX_SATELLITE_LEVEL = 300; // Cap at 300 (30% bonus - matches internal cap)
 
 // ============================================================================
 // MARKETPLACE CONSTANTS

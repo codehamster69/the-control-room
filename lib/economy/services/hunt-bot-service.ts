@@ -332,7 +332,7 @@ export class HuntBotService {
     };
 
     // Calculate satellite bonus for rare drops (increases chance of higher rarities)
-    const satelliteBonus = state.satellite_level * 0.03; // 0.03% per level
+    const satelliteBonus = state.satellite_level * 0.1; // 0.1% per level
     const adjustedWeights = { ...rarityWeights };
     
     // Shift some weight from Common to higher rarities based on satellite level

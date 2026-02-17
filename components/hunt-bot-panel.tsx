@@ -755,6 +755,36 @@ export function HuntBotPanel() {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* Token Balance Display in Upgrades Tab */}
+          <div
+            className="p-3 rounded border"
+            style={{
+              borderColor: "#ffc800",
+              backgroundColor: "rgba(255, 200, 0, 0.1)",
+            }}
+          >
+            <div className="flex justify-between items-center">
+              <span
+                className="text-xs"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  color: "#ffc800",
+                }}
+              >
+                YOUR BERRIES
+              </span>
+              <span
+                className="text-sm"
+                style={{
+                  fontFamily: "'Press Start 2P', cursive",
+                  color: "#ffc800",
+                }}
+              >
+                <BerryIcon size={16} /> {economyState.token_balance}
+              </span>
+            </div>
+          </div>
+
           {upgradeStatus ? (
             <>
               <div
@@ -767,7 +797,7 @@ export function HuntBotPanel() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
                         color: "#00ffff",
@@ -783,6 +813,14 @@ export function HuntBotPanel() {
                       Cost: <BerryIcon size={10} />
                       {costPerHour}/hr | Next: {itemsPerHour + 1} items/hr
                     </p>
+                    {economyState.token_balance >=
+                      (upgradeStatus?.bot_upgrade_cost || 100) && (
+                      <p className="text-[8px] text-green-400 mt-1">
+                        After: <BerryIcon size={8} />{" "}
+                        {economyState.token_balance -
+                          (upgradeStatus?.bot_upgrade_cost || 100)}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleUpgrade("bot")}
@@ -791,7 +829,7 @@ export function HuntBotPanel() {
                       economyState.token_balance <
                         (upgradeStatus?.bot_upgrade_cost || 100)
                     }
-                    className="px-3 py-1 text-xs rounded"
+                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
@@ -811,7 +849,7 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {" " + upgradeStatus?.bot_upgrade_cost || 100}
+                        {upgradeStatus?.bot_upgrade_cost || 100}
                       </>
                     )}
                   </button>
@@ -856,7 +894,7 @@ export function HuntBotPanel() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
                         color: "#ff00ff",
@@ -871,6 +909,15 @@ export function HuntBotPanel() {
                     <p className="text-[9px] text-gray-500">
                       Base: 15 min | Max: 1440 min (24h)
                     </p>
+                    {maxRuntime < 1440 &&
+                      economyState.token_balance >=
+                        (upgradeStatus?.runtime_upgrade_cost || 150) && (
+                        <p className="text-[8px] text-green-400 mt-1">
+                          After: <BerryIcon size={8} />{" "}
+                          {economyState.token_balance -
+                            (upgradeStatus?.runtime_upgrade_cost || 150)}
+                        </p>
+                      )}
                   </div>
                   <button
                     onClick={() => handleUpgrade("runtime")}
@@ -880,7 +927,7 @@ export function HuntBotPanel() {
                       economyState.token_balance <
                         (upgradeStatus?.runtime_upgrade_cost || 150)
                     }
-                    className="px-3 py-1 text-xs rounded"
+                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
@@ -904,7 +951,7 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {" " + upgradeStatus?.runtime_upgrade_cost || 150}
+                        {upgradeStatus?.runtime_upgrade_cost || 150}
                       </>
                     )}
                   </button>
@@ -949,14 +996,14 @@ export function HuntBotPanel() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
                         color: "#ffff00",
                       }}
                     >
                       SATELLITE (Lv.{upgradeStatus?.satellite_level || 0}/
-                      {upgradeStatus?.satellite_max_level || 1000})
+                      {upgradeStatus?.satellite_max_level || 300})
                     </h4>
                     <p className="text-[10px] text-gray-400 mt-1">
                       Current: +
@@ -966,8 +1013,16 @@ export function HuntBotPanel() {
                       % rare drops
                     </p>
                     <p className="text-[9px] text-gray-500">
-                      Base: 0% | +0.03% per level
+                      Base: 0% | +0.1% per level
                     </p>
+                    {economyState.token_balance >=
+                      (upgradeStatus?.satellite_upgrade_cost || 500) && (
+                      <p className="text-[8px] text-green-400 mt-1">
+                        After: <BerryIcon size={8} />{" "}
+                        {economyState.token_balance -
+                          (upgradeStatus?.satellite_upgrade_cost || 500)}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleUpgrade("satellite")}
@@ -976,7 +1031,7 @@ export function HuntBotPanel() {
                       economyState.token_balance <
                         (upgradeStatus?.satellite_upgrade_cost || 500)
                     }
-                    className="px-3 py-1 text-xs rounded"
+                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
@@ -996,11 +1051,12 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {" " + upgradeStatus?.satellite_upgrade_cost || 500}
+                        {upgradeStatus?.satellite_upgrade_cost || 500}
                       </>
                     )}
                   </button>
                 </div>
+
                 <div className="mt-2">
                   <div className="flex justify-between text-[8px] mb-1">
                     <span
@@ -1041,7 +1097,7 @@ export function HuntBotPanel() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4
-                      className="text-xs"
+                      className="text-xs whitespace-nowrap"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
                         color: "#00ff00",
@@ -1062,6 +1118,15 @@ export function HuntBotPanel() {
                       <BerryIcon size={10} />
                       /hr
                     </p>
+                    {(upgradeStatus?.cost_per_hour_current || 120) > 60 &&
+                      economyState.token_balance >=
+                        (upgradeStatus?.cost_per_hour_upgrade_cost || 200) && (
+                        <p className="text-[8px] text-green-400 mt-1">
+                          After: <BerryIcon size={8} />{" "}
+                          {economyState.token_balance -
+                            (upgradeStatus?.cost_per_hour_upgrade_cost || 200)}
+                        </p>
+                      )}
                   </div>
                   <button
                     onClick={() => handleUpgrade("cost")}
@@ -1071,7 +1136,7 @@ export function HuntBotPanel() {
                       economyState.token_balance <
                         (upgradeStatus?.cost_per_hour_upgrade_cost || 200)
                     }
-                    className="px-3 py-1 text-xs rounded"
+                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
@@ -1095,7 +1160,7 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {" " + upgradeStatus?.cost_per_hour_upgrade_cost || 200}
+                        {upgradeStatus?.cost_per_hour_upgrade_cost || 200}
                       </>
                     )}
                   </button>
