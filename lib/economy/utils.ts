@@ -96,7 +96,7 @@ export function calculateItemsPerHour(level: number): number {
  */
 export function calculateMaxRuntimeMinutes(level: number): number {
   const runtime = BASE_RUNTIME_MINUTES * Math.pow(RUNTIME_GROWTH_RATE, level);
-  return Math.min(MAX_RUNTIME_MINUTES, Math.floor(runtime));
+  return Math.min(MAX_RUNTIME_MINUTES, Math.ceil(runtime));
 }
 
 /**

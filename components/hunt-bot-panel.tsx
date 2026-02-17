@@ -340,6 +340,12 @@ export function HuntBotPanel() {
   const costPerHour = upgradeStatus?.bot_cost_per_hour || 120;
   const itemsPerHour = upgradeStatus?.bot_items_per_hour || 15;
 
+  // Free hunt is always 15 minutes
+  const freeHuntRuntimeMinutes = 15;
+  const freeHuntEstimatedItems = Math.floor(
+    (itemsPerHour / 60) * freeHuntRuntimeMinutes,
+  );
+
   const maxTokens = Math.floor((maxRuntime / 60) * costPerHour);
 
   const calculateRuntimeFromTokens = (tokens: number): number => {
@@ -354,6 +360,11 @@ export function HuntBotPanel() {
   );
   const effectivePaidRuntimeMinutes =
     calculateRuntimeFromTokens(effectivePaidTokens);
+
+  // Calculate estimated items for paid hunt (using effective runtime to account for max tokens)
+  const paidHuntEstimatedItems = Math.floor(
+    (itemsPerHour / 60) * effectivePaidRuntimeMinutes,
+  );
 
   return (
     <div className="p-4">
@@ -637,7 +648,9 @@ export function HuntBotPanel() {
                     color: "#000",
                   }}
                 >
-                  {hunting ? "STARTING..." : "START FREE HUNT (15m)"}
+                  {hunting
+                    ? "STARTING..."
+                    : `START FREE HUNT (${freeHuntRuntimeMinutes}m) ~${freeHuntEstimatedItems} items`}
                 </button>
               ) : (
                 <div
@@ -681,7 +694,7 @@ export function HuntBotPanel() {
               >
                 {hunting
                   ? "STARTING..."
-                  : `START PAID HUNT (${effectivePaidRuntimeMinutes}m)`}
+                  : `START PAID HUNT (${effectivePaidRuntimeMinutes}m) ~${paidHuntEstimatedItems} items`}
               </button>
             )}
           </div>
@@ -861,10 +874,13 @@ export function HuntBotPanel() {
                   <p className="text-[10px] text-gray-400 mt-1">
                     Current: {itemsPerHour} items/hr
                   </p>
-                  <p className="text-[9px] text-gray-500">
-                    Cost: <BerryIcon size={10} />
-                    {costPerHour}/hr | Next: {itemsPerHour + 1} items/hr
-                  </p>
+                  {(upgradeStatus?.bot_level || 0) <
+                    (upgradeStatus?.bot_max_level || 45) && (
+                    <p className="text-[9px] text-gray-500">
+                      Cost: <BerryIcon size={10} />
+                      {costPerHour}/hr | Next: {itemsPerHour + 1} items/hr
+                    </p>
+                  )}
                 </div>
 
                 {/* Row 2: Level selector + Upgrade button + After balance */}
@@ -935,72 +951,89 @@ export function HuntBotPanel() {
                   </div>
 
                   {/* Upgrade Button */}
-                  <button
-                    onClick={() => handleUpgrade("bot", bulkLevels.bot)}
-                    disabled={
-                      upgrading === "bot" ||
-                      economyState.token_balance <
-                        calculateBulkCost(
-                          "bot",
-                          upgradeStatus?.bot_level || 0,
-                          bulkLevels.bot,
-                        )
-                    }
-                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      backgroundColor:
+                  {(upgradeStatus?.bot_level || 0) >=
+                  (upgradeStatus?.bot_max_level || 45) ? (
+                    <button
+                      disabled
+                      className="px-2 py-1 text-xs rounded whitespace-nowrap"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor: "#333",
+                        color: "#666",
+                      }}
+                    >
+                      MAXED
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleUpgrade("bot", bulkLevels.bot)}
+                      disabled={
+                        upgrading === "bot" ||
                         economyState.token_balance <
-                        calculateBulkCost(
-                          "bot",
-                          upgradeStatus?.bot_level || 0,
-                          bulkLevels.bot,
-                        )
-                          ? "#333"
-                          : "#00ffff",
-                      color:
-                        economyState.token_balance <
-                        calculateBulkCost(
-                          "bot",
-                          upgradeStatus?.bot_level || 0,
-                          bulkLevels.bot,
-                        )
-                          ? "#666"
-                          : "#000",
-                    }}
-                  >
-                    {upgrading === "bot" ? (
-                      "..."
-                    ) : (
-                      <>
-                        UPGRADE <BerryIcon size={10} />
-                        {calculateBulkCost(
-                          "bot",
-                          upgradeStatus?.bot_level || 0,
-                          bulkLevels.bot,
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {/* After Balance */}
-                  <div className="text-right">
-                    {economyState.token_balance >=
-                      calculateBulkCost(
-                        "bot",
-                        upgradeStatus?.bot_level || 0,
-                        bulkLevels.bot,
-                      ) && (
-                      <p className="text-[8px] text-green-400">
-                        After: <BerryIcon size={8} />{" "}
-                        {economyState.token_balance -
                           calculateBulkCost(
                             "bot",
                             upgradeStatus?.bot_level || 0,
                             bulkLevels.bot,
+                          )
+                      }
+                      className="px-2 py-1 text-xs rounded whitespace-nowrap"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          economyState.token_balance <
+                          calculateBulkCost(
+                            "bot",
+                            upgradeStatus?.bot_level || 0,
+                            bulkLevels.bot,
+                          )
+                            ? "#333"
+                            : "#00ffff",
+                        color:
+                          economyState.token_balance <
+                          calculateBulkCost(
+                            "bot",
+                            upgradeStatus?.bot_level || 0,
+                            bulkLevels.bot,
+                          )
+                            ? "#666"
+                            : "#000",
+                      }}
+                    >
+                      {upgrading === "bot" ? (
+                        "..."
+                      ) : (
+                        <>
+                          UPGRADE <BerryIcon size={10} />
+                          {calculateBulkCost(
+                            "bot",
+                            upgradeStatus?.bot_level || 0,
+                            bulkLevels.bot,
                           )}
-                      </p>
-                    )}
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {/* After Balance */}
+                  <div className="text-right">
+                    {(upgradeStatus?.bot_level || 0) <
+                      (upgradeStatus?.bot_max_level || 45) &&
+                      economyState.token_balance >=
+                        calculateBulkCost(
+                          "bot",
+                          upgradeStatus?.bot_level || 0,
+                          bulkLevels.bot,
+                        ) && (
+                        <p className="text-[8px] text-green-400">
+                          After: <BerryIcon size={8} />{" "}
+                          {economyState.token_balance -
+                            calculateBulkCost(
+                              "bot",
+                              upgradeStatus?.bot_level || 0,
+                              bulkLevels.bot,
+                            )}
+                        </p>
+                      )}
                   </div>
                 </div>
                 <div className="mt-2">
@@ -1131,62 +1164,75 @@ export function HuntBotPanel() {
                   </div>
 
                   {/* Upgrade Button */}
-                  <button
-                    onClick={() => handleUpgrade("runtime", bulkLevels.runtime)}
-                    disabled={
-                      upgrading === "runtime" ||
-                      maxRuntime >= 1440 ||
-                      economyState.token_balance <
-                        calculateBulkCost(
-                          "runtime",
-                          upgradeStatus?.runtime_level || 0,
-                          bulkLevels.runtime,
-                        )
-                    }
-                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
-                    style={{
-                      fontFamily: "'Press Start 2P', cursive",
-                      backgroundColor:
-                        maxRuntime >= 1440 ||
+                  {(upgradeStatus?.runtime_level || 0) >=
+                  (upgradeStatus?.runtime_max_level || 100) ? (
+                    <button
+                      disabled
+                      className="px-2 py-1 text-xs rounded whitespace-nowrap"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor: "#333",
+                        color: "#666",
+                      }}
+                    >
+                      MAXED
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        handleUpgrade("runtime", bulkLevels.runtime)
+                      }
+                      disabled={
+                        upgrading === "runtime" ||
                         economyState.token_balance <
                           calculateBulkCost(
                             "runtime",
                             upgradeStatus?.runtime_level || 0,
                             bulkLevels.runtime,
                           )
-                          ? "#333"
-                          : "#ff00ff",
-                      color:
-                        maxRuntime >= 1440 ||
-                        economyState.token_balance <
+                      }
+                      className="px-2 py-1 text-xs rounded whitespace-nowrap"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          economyState.token_balance <
                           calculateBulkCost(
                             "runtime",
                             upgradeStatus?.runtime_level || 0,
                             bulkLevels.runtime,
                           )
-                          ? "#666"
-                          : "#000",
-                    }}
-                  >
-                    {maxRuntime >= 1440 ? (
-                      "MAXED"
-                    ) : upgrading === "runtime" ? (
-                      "..."
-                    ) : (
-                      <>
-                        UPGRADE <BerryIcon size={10} />
-                        {calculateBulkCost(
-                          "runtime",
-                          upgradeStatus?.runtime_level || 0,
-                          bulkLevels.runtime,
-                        )}
-                      </>
-                    )}
-                  </button>
+                            ? "#333"
+                            : "#ff00ff",
+                        color:
+                          economyState.token_balance <
+                          calculateBulkCost(
+                            "runtime",
+                            upgradeStatus?.runtime_level || 0,
+                            bulkLevels.runtime,
+                          )
+                            ? "#666"
+                            : "#000",
+                      }}
+                    >
+                      {upgrading === "runtime" ? (
+                        "..."
+                      ) : (
+                        <>
+                          UPGRADE <BerryIcon size={10} />
+                          {calculateBulkCost(
+                            "runtime",
+                            upgradeStatus?.runtime_level || 0,
+                            bulkLevels.runtime,
+                          )}
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   {/* After Balance */}
                   <div className="text-right">
-                    {maxRuntime < 1440 &&
+                    {(upgradeStatus?.runtime_level || 0) <
+                      (upgradeStatus?.runtime_max_level || 100) &&
                       economyState.token_balance >=
                         calculateBulkCost(
                           "runtime",

@@ -91,7 +91,7 @@ export class UpgradeService {
       bot_max_level: botMaxLevel,
       bot_upgrade_cost: calculateBotUpgradeCost(state.bot_items_per_hour_level),
       bot_items_per_hour: calculateItemsPerHour(state.bot_items_per_hour_level),
-      bot_cost_per_hour: BASE_COST_PER_HOUR,
+      bot_cost_per_hour: calculateCostPerHour(state.cost_per_hour_level),
       bot_progress_percent: botProgress,
       
       runtime_level: state.bot_runtime_level,
