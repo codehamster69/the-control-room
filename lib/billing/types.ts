@@ -1,4 +1,4 @@
-export type SupportedCurrency = 'usd' | 'eur' | 'gbp';
+export type SupportedCurrency = 'usd' | 'eur' | 'gbp' | 'inr';
 
 export interface TicketPurchaseSession {
   checkoutSessionId: string;

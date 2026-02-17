@@ -74,6 +74,15 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_SECRET
 
 # Apify
 APIFY_API_TOKEN=YOUR_APIFY_API_TOKEN
+
+# Billing (Stripe Checkout for ticket minting)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+STRIPE_SECRET_KEY=sk_live_or_test_key
+STRIPE_WEBHOOK_SECRET=whsec_...
+MARKETPLACE_TICKET_PRICE_USD=499
+MARKETPLACE_TICKET_PRICE_EUR=499
+MARKETPLACE_TICKET_PRICE_GBP=499
+MARKETPLACE_TICKET_PRICE_INR=39900
 ```
 
 ### 5. Run the Development Server
@@ -112,3 +121,12 @@ The core Supabase schema includes the following tables:
 *   **`instagram_verifications`**: Temporarily stores verification codes for the Instagram auth flow.
 *   **`community_links`**: Stores community URLs managed by admins.
 *   **`leaderboard` (View)**: A database view that calculates each user's `item_power` and `total_power` for ranking.
+
+
+### 6. Stripe webhook for ticket minting
+
+The app now exposes `POST /api/billing/webhook/stripe`. Configure this URL in Stripe Dashboard (Developers → Webhooks).
+
+- Successful events (`checkout.session.completed`, `checkout.session.async_payment_succeeded`) mark payments as succeeded and mint marketplace tickets.
+- Failed events (`checkout.session.async_payment_failed`, `checkout.session.expired`) mark payments as failed.
+- Minted tickets are added to `marketplace_tickets` and synced to `profiles.owned_ticket_ids`.

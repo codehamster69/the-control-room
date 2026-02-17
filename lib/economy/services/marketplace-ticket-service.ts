@@ -13,6 +13,75 @@ export class MarketplaceTicketService {
     this.supabase = supabaseClient;
   }
 
+  private normalizeOwnedTicketIds(value: unknown): string[] {
+    if (!value) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value.filter((entry) => typeof entry === 'string');
+    }
+
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((entry) => typeof entry === 'string');
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  private async addTicketToProfileOwnedList(userId: string, ticketId: string): Promise<boolean> {
+    const { data: profile, error: profileError } = await this.supabase
+      .from('profiles')
+      .select('id, owned_ticket_ids')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return false;
+    }
+
+    const owned = this.normalizeOwnedTicketIds(profile.owned_ticket_ids);
+    if (!owned.includes(ticketId)) {
+      owned.push(ticketId);
+    }
+
+    const { error: updateError } = await this.supabase
+      .from('profiles')
+      .update({ owned_ticket_ids: JSON.stringify(owned) })
+      .eq('id', userId);
+
+    return !updateError;
+  }
+
+  private async removeTicketFromProfileOwnedList(userId: string, ticketId: string): Promise<boolean> {
+    const { data: profile, error: profileError } = await this.supabase
+      .from('profiles')
+      .select('id, owned_ticket_ids')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return false;
+    }
+
+    const owned = this.normalizeOwnedTicketIds(profile.owned_ticket_ids)
+      .filter((ownedTicketId) => ownedTicketId !== ticketId);
+
+    const { error: updateError } = await this.supabase
+      .from('profiles')
+      .update({ owned_ticket_ids: JSON.stringify(owned) })
+      .eq('id', userId);
+
+    return !updateError;
+  }
+
   async mintTicketForMoney(userId: string, paymentRef: string): Promise<{
     success: boolean;
     ticket?: MarketplaceTicket;
@@ -38,6 +107,11 @@ export class MarketplaceTicketService {
       return { success: false, error: 'Failed to mint ticket for payment reference' };
     }
 
+    const profileUpdateOk = await this.addTicketToProfileOwnedList(userId, data.ticket_id);
+    if (!profileUpdateOk) {
+      return { success: false, error: 'Ticket minted but profile ownership update failed' };
+    }
+
     return { success: true, ticket: data as MarketplaceTicket };
   }
 
@@ -46,15 +120,17 @@ export class MarketplaceTicketService {
     ticket?: MarketplaceTicket;
     error?: string;
   }> {
-    if (!Number.isInteger(priceTokens) || priceTokens <= 0) {
-      return { success: false, error: 'priceTokens must be a positive integer' };
+    if (!Number.isInteger(priceTokens) || priceTokens < 0) {
+      return { success: false, error: 'priceTokens must be zero or a positive integer' };
     }
+
+    const listedPrice = priceTokens === 0 ? 1 : priceTokens;
 
     const { data, error } = await this.supabase
       .from('marketplace_tickets')
       .update({
         status: MARKETPLACE_TICKET_STATUS.LISTED,
-        listed_price_tokens: priceTokens,
+        listed_price_tokens: listedPrice,
       })
       .eq('ticket_id', ticketId)
       .eq('owner_user_id', sellerId)
@@ -122,6 +198,8 @@ export class MarketplaceTicketService {
       return { success: false, error: 'Failed to grant premium subscription' };
     }
 
+    await this.removeTicketFromProfileOwnedList(ownerId, ticketId);
+
     return { success: true, subscription_expiry: nextExpiry };
   }
 
@@ -161,6 +239,9 @@ export class MarketplaceTicketService {
         from_user_id: fromUserId,
         to_user_id: toUserId,
       });
+
+    await this.removeTicketFromProfileOwnedList(fromUserId, ticketId);
+    await this.addTicketToProfileOwnedList(toUserId, ticketId);
 
     return { success: true, ticket: data as MarketplaceTicket };
   }

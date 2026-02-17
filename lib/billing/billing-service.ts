@@ -33,12 +33,20 @@ export class BillingService {
       return { success: false, error: 'amount must be a positive integer in minor currency units' };
     }
 
-    const session = await this.paymentProvider.createCheckoutSession({
-      userId,
-      quantity,
-      currency,
-      amount,
-    });
+    let session;
+    try {
+      session = await this.paymentProvider.createCheckoutSession({
+        userId,
+        quantity,
+        currency,
+        amount,
+      });
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create payment session',
+      };
+    }
 
     const supabase = await createAdminClient();
     await supabase.from('billing_payments').insert({
