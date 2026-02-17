@@ -99,9 +99,11 @@ export interface MarketplaceListing {
 export interface MarketplaceTransaction {
   id: string;
   listing_id: string;
+  ticket_id: string;
   buyer_id: string;
   seller_id: string;
   price: number;
+  trade_type: 'paid' | 'gift';
   burn_amount: number; // Tokens burned
   platform_fee: number; // Tokens to platform
   seller_receives: number;

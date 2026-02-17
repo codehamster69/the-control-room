@@ -136,9 +136,11 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_completed ON ticket_marketplace(compl
 CREATE TABLE IF NOT EXISTS marketplace_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   listing_id UUID NOT NULL REFERENCES ticket_marketplace(id) ON DELETE CASCADE,
+  ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
   buyer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   seller_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   price BIGINT NOT NULL,
+  trade_type TEXT NOT NULL DEFAULT 'paid' CHECK (trade_type IN ('paid', 'gift')),
   burn_amount BIGINT NOT NULL,
   platform_fee BIGINT NOT NULL,
   seller_receives BIGINT NOT NULL,
@@ -159,6 +161,8 @@ CREATE POLICY "System can insert transactions" ON marketplace_transactions FOR I
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_buyer ON marketplace_transactions(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_seller ON marketplace_transactions(seller_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_ticket ON marketplace_transactions(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_trade_type ON marketplace_transactions(trade_type);
 CREATE INDEX IF NOT EXISTS idx_transactions_completed ON marketplace_transactions(completed_at);
 
 -- ============================================================================
