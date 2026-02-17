@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'list': {
-        if (!ticket_id || !price) {
+        if (!ticket_id || typeof price !== 'number') {
           return NextResponse.json(
             { success: false, error: 'Missing ticket_id or price' },
             { status: 400 }

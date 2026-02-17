@@ -34,7 +34,7 @@ export class MarketplaceService {
     error?: string;
   }> {
     // Validate price
-    if (price <= 0) {
+    if (!Number.isInteger(price) || price < 0) {
       return { success: false, error: 'Invalid price' };
     }
 
@@ -182,6 +182,10 @@ export class MarketplaceService {
       return { success: false, error: 'Cannot buy your own listing' };
     }
 
+    if (!listing.tickets || listing.tickets.owner_id !== listing.seller_id) {
+      return { success: false, error: 'Seller no longer owns this ticket' };
+    }
+
     // Check if ticket is still valid
     if (listing.tickets.is_activated && listing.tickets.expires_at) {
       const expiry = new Date(listing.tickets.expires_at).getTime();
@@ -193,12 +197,16 @@ export class MarketplaceService {
     // Get buyer balance
     const { data: buyerProfile, error: buyerError } = await this.supabase
       .from('profiles')
-      .select('id, token_balance, owned_ticket_ids')
+      .select('id, token_balance, owned_ticket_ids, is_instagram_verified')
       .eq('id', buyerId)
       .single();
 
     if (buyerError || !buyerProfile) {
-      return { success: false, error: 'Buyer not found' };
+      return { success: false, error: 'Buyer identity not found' };
+    }
+
+    if (!buyerProfile.is_instagram_verified) {
+      return { success: false, error: 'Buyer is not eligible to receive ticket' };
     }
 
     if (buyerProfile.token_balance < listing.price) {
@@ -207,26 +215,31 @@ export class MarketplaceService {
 
     // Calculate transaction amounts
     const price = listing.price;
-    const burnAmount = calculateMarketplaceBurn(price);
-    const platformFee = Math.floor((price * MARKETPLACE_PLATFORM_FEE_BP) / 10000);
-    const sellerReceives = price - burnAmount - platformFee;
+    const tradeType: 'paid' | 'gift' = price === 0 ? 'gift' : 'paid';
+    const burnAmount = tradeType === 'gift' ? 0 : calculateMarketplaceBurn(price);
+    const platformFee = tradeType === 'gift'
+      ? 0
+      : Math.floor((price * MARKETPLACE_PLATFORM_FEE_BP) / 10000);
+    const sellerReceives = tradeType === 'gift' ? 0 : price - burnAmount - platformFee;
 
     // Execute transaction atomically (simplified - in production use RPC)
-    
-    // 1. Deduct from buyer
-    const { error: buyerUpdateError } = await this.supabase
-      .from('profiles')
-      .update({
-        token_balance: buyerProfile.token_balance - price,
-      })
-      .eq('id', buyerId)
-      .eq('token_balance', buyerProfile.token_balance);
 
-    if (buyerUpdateError) {
-      return { success: false, error: 'Transaction failed - buyer balance' };
+    // 1. Lock buyer tokens (zero lock for gifts)
+    if (price > 0) {
+      const { error: buyerUpdateError } = await this.supabase
+        .from('profiles')
+        .update({
+          token_balance: buyerProfile.token_balance - price,
+        })
+        .eq('id', buyerId)
+        .eq('token_balance', buyerProfile.token_balance);
+
+      if (buyerUpdateError) {
+        return { success: false, error: 'Transaction failed - buyer balance' };
+      }
     }
 
-    // 2. Add to seller
+    // 2. Add to seller (paid only)
     const { data: sellerProfile, error: sellerError } = await this.supabase
       .from('profiles')
       .select('id, token_balance')
@@ -234,23 +247,27 @@ export class MarketplaceService {
       .single();
 
     if (sellerError || !sellerProfile) {
-      // Refund buyer
-      await this.supabase
-        .from('profiles')
-        .update({
-          token_balance: buyerProfile.token_balance,
-        })
-        .eq('id', buyerId);
+      // Refund buyer (paid only)
+      if (price > 0) {
+        await this.supabase
+          .from('profiles')
+          .update({
+            token_balance: buyerProfile.token_balance,
+          })
+          .eq('id', buyerId);
+      }
       
       return { success: false, error: 'Seller not found' };
     }
 
-    await this.supabase
-      .from('profiles')
-      .update({
-        token_balance: sellerProfile.token_balance + sellerReceives,
-      })
-      .eq('id', listing.seller_id);
+    if (price > 0) {
+      await this.supabase
+        .from('profiles')
+        .update({
+          token_balance: sellerProfile.token_balance + sellerReceives,
+        })
+        .eq('id', listing.seller_id);
+    }
 
     // 3. Transfer ticket ownership
     await this.supabase
@@ -291,9 +308,11 @@ export class MarketplaceService {
     const transaction: MarketplaceTransaction = {
       id: `txn_${Date.now()}`,
       listing_id: listingId,
+      ticket_id: listing.ticket_id,
       buyer_id: buyerId,
       seller_id: listing.seller_id,
       price: price,
+      trade_type: tradeType,
       burn_amount: burnAmount,
       platform_fee: platformFee,
       seller_receives: sellerReceives,
@@ -304,8 +323,10 @@ export class MarketplaceService {
 
     // Update metrics
     await this.updateMetrics('tickets_sold', 1);
-    await this.updateMetrics('marketplace_volume', price);
-    await this.updateMetrics('tokens_burned', burnAmount);
+    if (price > 0) {
+      await this.updateMetrics('marketplace_volume', price);
+      await this.updateMetrics('tokens_burned', burnAmount);
+    }
 
     return { success: true, transaction };
   }
@@ -382,9 +403,11 @@ export class MarketplaceService {
       .from('marketplace_transactions')
       .insert({
         listing_id: transaction.listing_id,
+        ticket_id: transaction.ticket_id,
         buyer_id: transaction.buyer_id,
         seller_id: transaction.seller_id,
         price: transaction.price,
+        trade_type: transaction.trade_type,
         burn_amount: transaction.burn_amount,
         platform_fee: transaction.platform_fee,
         seller_receives: transaction.seller_receives,
