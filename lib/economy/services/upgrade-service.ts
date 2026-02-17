@@ -121,6 +121,14 @@ export class UpgradeService {
    * Burns tokens to increase items per hour
    */
   async upgradeBot(): Promise<UpgradeResult> {
+    return this.upgradeBotBulk(1);
+  }
+
+  /**
+   * Bulk upgrade bot efficiency
+   * Burns tokens to increase items per hour by multiple levels
+   */
+  async upgradeBotBulk(levels: number): Promise<UpgradeResult> {
     const state = await this.getUserState();
     
     // Check if already at max level
@@ -133,25 +141,34 @@ export class UpgradeService {
         error: `Maximum bot speed reached (${MAX_ITEMS_PER_HOUR} items/hour).`,
       };
     }
+
+    // Calculate how many levels we can actually upgrade
+    const maxPossibleLevels = MAX_BOT_LEVEL - state.bot_items_per_hour_level;
+    const actualLevels = Math.min(levels, maxPossibleLevels);
     
-    const newLevel = state.bot_items_per_hour_level + 1;
-    const upgradeCost = calculateBotUpgradeCost(state.bot_items_per_hour_level);
+    // Calculate total cost for all levels
+    let totalCost = 0;
+    for (let i = 0; i < actualLevels; i++) {
+      totalCost += calculateBotUpgradeCost(state.bot_items_per_hour_level + i);
+    }
 
     // Validate balance
-    if (state.token_balance < upgradeCost) {
+    if (state.token_balance < totalCost) {
       return {
         success: false,
         upgrade_type: 'bot',
         tokens_spent: 0,
-        error: `Insufficient tokens. Need ${upgradeCost} tokens.`,
+        error: `Insufficient tokens. Need ${totalCost} tokens for ${actualLevels} level(s).`,
       };
     }
+
+    const newLevel = state.bot_items_per_hour_level + actualLevels;
 
     // Deduct tokens atomically
     const { error: deductError } = await this.supabase
       .from('profiles')
       .update({
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         bot_items_per_hour_level: newLevel,
       })
       .eq('id', this.userId)
@@ -168,15 +185,16 @@ export class UpgradeService {
     }
 
     // Track burn
-    await this.trackTokenBurn(upgradeCost);
+    await this.trackTokenBurn(totalCost);
 
     return {
       success: true,
       upgrade_type: 'bot',
       new_level: newLevel,
-      tokens_spent: upgradeCost,
+      tokens_spent: totalCost,
+      levels_upgraded: actualLevels,
       updated_state: {
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         bot_items_per_hour_level: newLevel,
       },
     };
@@ -187,6 +205,14 @@ export class UpgradeService {
    * Burns tokens to increase max runtime (up to 24 hours)
    */
   async upgradeRuntime(): Promise<UpgradeResult> {
+    return this.upgradeRuntimeBulk(1);
+  }
+
+  /**
+   * Bulk upgrade max runtime
+   * Burns tokens to increase max runtime by multiple levels
+   */
+  async upgradeRuntimeBulk(levels: number): Promise<UpgradeResult> {
     const state = await this.getUserState();
     
     // Check if already at max runtime
@@ -199,25 +225,34 @@ export class UpgradeService {
         error: `Maximum runtime reached (${MAX_RUNTIME_MINUTES} minutes = 24 hours).`,
       };
     }
+
+    // Calculate how many levels we can actually upgrade
+    const maxPossibleLevels = MAX_RUNTIME_LEVEL - state.bot_runtime_level;
+    const actualLevels = Math.min(levels, maxPossibleLevels);
     
-    const newLevel = state.bot_runtime_level + 1;
-    const upgradeCost = calculateRuntimeUpgradeCost(state.bot_runtime_level);
+    // Calculate total cost for all levels
+    let totalCost = 0;
+    for (let i = 0; i < actualLevels; i++) {
+      totalCost += calculateRuntimeUpgradeCost(state.bot_runtime_level + i);
+    }
 
     // Validate balance
-    if (state.token_balance < upgradeCost) {
+    if (state.token_balance < totalCost) {
       return {
         success: false,
         upgrade_type: 'runtime',
         tokens_spent: 0,
-        error: `Insufficient tokens. Need ${upgradeCost} tokens.`,
+        error: `Insufficient tokens. Need ${totalCost} tokens for ${actualLevels} level(s).`,
       };
     }
+
+    const newLevel = state.bot_runtime_level + actualLevels;
 
     // Deduct tokens atomically
     const { error: deductError } = await this.supabase
       .from('profiles')
       .update({
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         bot_runtime_level: newLevel,
       })
       .eq('id', this.userId)
@@ -234,15 +269,16 @@ export class UpgradeService {
     }
 
     // Track burn
-    await this.trackTokenBurn(upgradeCost);
+    await this.trackTokenBurn(totalCost);
 
     return {
       success: true,
       upgrade_type: 'runtime',
       new_level: newLevel,
-      tokens_spent: upgradeCost,
+      tokens_spent: totalCost,
+      levels_upgraded: actualLevels,
       updated_state: {
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         bot_runtime_level: newLevel,
       },
     };
@@ -253,6 +289,14 @@ export class UpgradeService {
    * Burns tokens to increase rare item drop chance
    */
   async upgradeSatellite(): Promise<UpgradeResult> {
+    return this.upgradeSatelliteBulk(1);
+  }
+
+  /**
+   * Bulk upgrade satellite
+   * Burns tokens to increase rare item drop chance by multiple levels
+   */
+  async upgradeSatelliteBulk(levels: number): Promise<UpgradeResult> {
     const state = await this.getUserState();
     
     // Check if already at max level
@@ -264,25 +308,34 @@ export class UpgradeService {
         error: `Maximum satellite level reached (${MAX_SATELLITE_LEVEL} = ${(MAX_SATELLITE_LEVEL * 10 / 100).toFixed(1)}% rare drop bonus).`,
       };
     }
+
+    // Calculate how many levels we can actually upgrade
+    const maxPossibleLevels = MAX_SATELLITE_LEVEL - state.satellite_level;
+    const actualLevels = Math.min(levels, maxPossibleLevels);
     
-    const newLevel = state.satellite_level + 1;
-    const upgradeCost = calculateSatelliteUpgradeCost(state.satellite_level);
+    // Calculate total cost for all levels
+    let totalCost = 0;
+    for (let i = 0; i < actualLevels; i++) {
+      totalCost += calculateSatelliteUpgradeCost(state.satellite_level + i);
+    }
 
     // Validate balance
-    if (state.token_balance < upgradeCost) {
+    if (state.token_balance < totalCost) {
       return {
         success: false,
         upgrade_type: 'satellite',
         tokens_spent: 0,
-        error: `Insufficient tokens. Need ${upgradeCost} tokens.`,
+        error: `Insufficient tokens. Need ${totalCost} tokens for ${actualLevels} level(s).`,
       };
     }
+
+    const newLevel = state.satellite_level + actualLevels;
 
     // Deduct tokens atomically
     const { error: deductError } = await this.supabase
       .from('profiles')
       .update({
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         satellite_level: newLevel,
       })
       .eq('id', this.userId)
@@ -299,15 +352,16 @@ export class UpgradeService {
     }
 
     // Track burn
-    await this.trackTokenBurn(upgradeCost);
+    await this.trackTokenBurn(totalCost);
 
     return {
       success: true,
       upgrade_type: 'satellite',
       new_level: newLevel,
-      tokens_spent: upgradeCost,
+      tokens_spent: totalCost,
+      levels_upgraded: actualLevels,
       updated_state: {
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         satellite_level: newLevel,
       },
     };
@@ -318,6 +372,14 @@ export class UpgradeService {
    * Burns tokens to reduce hunt cost per hour (from 120 to 60 tokens/hour)
    */
   async upgradeCostPerHour(): Promise<UpgradeResult> {
+    return this.upgradeCostPerHourBulk(1);
+  }
+
+  /**
+   * Bulk upgrade cost per hour
+   * Burns tokens to reduce hunt cost per hour by multiple levels
+   */
+  async upgradeCostPerHourBulk(levels: number): Promise<UpgradeResult> {
     const state = await this.getUserState();
     
     // Check if already at max level
@@ -330,25 +392,34 @@ export class UpgradeService {
         error: `Minimum cost per hour reached (${MIN_COST_PER_HOUR} tokens/hour).`,
       };
     }
+
+    // Calculate how many levels we can actually upgrade
+    const maxPossibleLevels = MAX_COST_PER_HOUR_LEVEL - state.cost_per_hour_level;
+    const actualLevels = Math.min(levels, maxPossibleLevels);
     
-    const newLevel = state.cost_per_hour_level + 1;
-    const upgradeCost = calculateCostPerHourUpgradeCost(state.cost_per_hour_level);
+    // Calculate total cost for all levels
+    let totalCost = 0;
+    for (let i = 0; i < actualLevels; i++) {
+      totalCost += calculateCostPerHourUpgradeCost(state.cost_per_hour_level + i);
+    }
 
     // Validate balance
-    if (state.token_balance < upgradeCost) {
+    if (state.token_balance < totalCost) {
       return {
         success: false,
         upgrade_type: 'cost',
         tokens_spent: 0,
-        error: `Insufficient tokens. Need ${upgradeCost} tokens.`,
+        error: `Insufficient tokens. Need ${totalCost} tokens for ${actualLevels} level(s).`,
       };
     }
+
+    const newLevel = state.cost_per_hour_level + actualLevels;
 
     // Deduct tokens atomically
     const { error: deductError } = await this.supabase
       .from('profiles')
       .update({
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         cost_per_hour_level: newLevel,
       })
       .eq('id', this.userId)
@@ -365,15 +436,16 @@ export class UpgradeService {
     }
 
     // Track burn
-    await this.trackTokenBurn(upgradeCost);
+    await this.trackTokenBurn(totalCost);
 
     return {
       success: true,
       upgrade_type: 'cost',
       new_level: newLevel,
-      tokens_spent: upgradeCost,
+      tokens_spent: totalCost,
+      levels_upgraded: actualLevels,
       updated_state: {
-        token_balance: state.token_balance - upgradeCost,
+        token_balance: state.token_balance - totalCost,
         cost_per_hour_level: newLevel,
       },
     };

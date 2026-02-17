@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { upgrade_type } = body;
+    const { upgrade_type, levels = 1 } = body;
 
     const upgradeService = createUpgradeService(supabase, user.id);
 
     switch (upgrade_type) {
       case 'bot': {
-        const result = await upgradeService.upgradeBot();
+        const result = await upgradeService.upgradeBotBulk(levels);
         
         if (!result.success) {
           return NextResponse.json(
@@ -57,12 +57,15 @@ export async function POST(request: NextRequest) {
           upgrade_type: 'bot',
           new_level: result.new_level,
           tokens_spent: result.tokens_spent,
-          message: `Bot upgraded to level ${result.new_level}!`,
+          levels_upgraded: result.levels_upgraded,
+          message: result.levels_upgraded && result.levels_upgraded > 1 
+            ? `Bot upgraded ${result.levels_upgraded} levels to level ${result.new_level}!`
+            : `Bot upgraded to level ${result.new_level}!`,
         });
       }
 
       case 'runtime': {
-        const result = await upgradeService.upgradeRuntime();
+        const result = await upgradeService.upgradeRuntimeBulk(levels);
         
         if (!result.success) {
           return NextResponse.json(
@@ -76,12 +79,15 @@ export async function POST(request: NextRequest) {
           upgrade_type: 'runtime',
           new_level: result.new_level,
           tokens_spent: result.tokens_spent,
-          message: `Runtime upgraded to level ${result.new_level}!`,
+          levels_upgraded: result.levels_upgraded,
+          message: result.levels_upgraded && result.levels_upgraded > 1 
+            ? `Runtime upgraded ${result.levels_upgraded} levels to level ${result.new_level}!`
+            : `Runtime upgraded to level ${result.new_level}!`,
         });
       }
 
       case 'satellite': {
-        const result = await upgradeService.upgradeSatellite();
+        const result = await upgradeService.upgradeSatelliteBulk(levels);
         
         if (!result.success) {
           return NextResponse.json(
@@ -95,12 +101,15 @@ export async function POST(request: NextRequest) {
           upgrade_type: 'satellite',
           new_level: result.new_level,
           tokens_spent: result.tokens_spent,
-          message: `Satellite upgraded to level ${result.new_level}!`,
+          levels_upgraded: result.levels_upgraded,
+          message: result.levels_upgraded && result.levels_upgraded > 1 
+            ? `Satellite upgraded ${result.levels_upgraded} levels to level ${result.new_level}!`
+            : `Satellite upgraded to level ${result.new_level}!`,
         });
       }
 
       case 'cost': {
-        const result = await upgradeService.upgradeCostPerHour();
+        const result = await upgradeService.upgradeCostPerHourBulk(levels);
         
         if (!result.success) {
           return NextResponse.json(
@@ -114,7 +123,10 @@ export async function POST(request: NextRequest) {
           upgrade_type: 'cost',
           new_level: result.new_level,
           tokens_spent: result.tokens_spent,
-          message: `Cost per hour upgraded to level ${result.new_level}!`,
+          levels_upgraded: result.levels_upgraded,
+          message: result.levels_upgraded && result.levels_upgraded > 1 
+            ? `Cost per hour upgraded ${result.levels_upgraded} levels to level ${result.new_level}!`
+            : `Cost per hour upgraded to level ${result.new_level}!`,
         });
       }
 

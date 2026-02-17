@@ -164,6 +164,7 @@ export interface UpgradeResult {
   upgrade_type: 'bot' | 'runtime' | 'satellite' | 'cost';
   new_level?: number;
   tokens_spent: number;
+  levels_upgraded?: number; // Number of levels upgraded (for bulk upgrades)
   error?: string;
   updated_state?: Partial<UserEconomyState>;
 }

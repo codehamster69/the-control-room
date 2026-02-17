@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  calculateBotUpgradeCost,
+  calculateRuntimeUpgradeCost,
+  calculateSatelliteUpgradeCost,
+  calculateCostPerHourUpgradeCost,
+} from "@/lib/economy/utils";
 
 // Berry icon component
 const BerryIcon = ({
@@ -108,6 +114,28 @@ export function HuntBotPanel() {
     null,
   );
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [bulkLevels, setBulkLevels] = useState<Record<string, number>>({
+    bot: 1,
+    runtime: 1,
+    satellite: 1,
+    cost: 1,
+  });
+
+  // Adjust bulk level for an upgrade type
+  const adjustBulkLevel = (
+    type: "bot" | "runtime" | "satellite" | "cost",
+    delta: number,
+    currentLevel: number,
+    maxLevel: number,
+  ) => {
+    setBulkLevels((prev) => {
+      const newLevel = Math.max(
+        1,
+        Math.min(prev[type] + delta, maxLevel - currentLevel),
+      );
+      return { ...prev, [type]: newLevel };
+    });
+  };
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -194,19 +222,22 @@ export function HuntBotPanel() {
 
   const handleUpgrade = async (
     upgradeType: "bot" | "runtime" | "satellite" | "cost",
+    levels: number = 1,
   ) => {
     setUpgrading(upgradeType);
     try {
       const response = await fetch("/api/economy/upgrades", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ upgrade_type: upgradeType }),
+        body: JSON.stringify({ upgrade_type: upgradeType, levels }),
       });
       const result = await response.json();
       if (result.success) {
         // Wait a bit before reloading status to ensure database update is complete
         await new Promise((resolve) => setTimeout(resolve, 500));
         await loadStatus();
+        // Reset bulk levels after successful upgrade
+        setBulkLevels((prev) => ({ ...prev, [upgradeType]: 1 }));
       } else {
         alert(result.error || "Upgrade failed");
       }
@@ -215,6 +246,27 @@ export function HuntBotPanel() {
     } finally {
       setUpgrading(null);
     }
+  };
+
+  // Calculate total cost for bulk upgrade
+  const calculateBulkCost = (
+    type: string,
+    currentLevel: number,
+    levels: number,
+  ): number => {
+    let total = 0;
+    for (let i = 0; i < levels; i++) {
+      if (type === "bot") {
+        total += calculateBotUpgradeCost(currentLevel + i);
+      } else if (type === "runtime") {
+        total += calculateRuntimeUpgradeCost(currentLevel + i);
+      } else if (type === "satellite") {
+        total += calculateSatelliteUpgradeCost(currentLevel + i);
+      } else if (type === "cost") {
+        total += calculateCostPerHourUpgradeCost(currentLevel + i);
+      }
+    }
+    return total;
   };
 
   const handleCollect = async () => {
@@ -794,52 +846,125 @@ export function HuntBotPanel() {
                   backgroundColor: "rgba(0, 255, 255, 0.05)",
                 }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4
-                      className="text-xs whitespace-nowrap"
+                {/* Row 1: Title and stats */}
+                <div className="mb-2">
+                  <h4
+                    className="text-xs whitespace-nowrap"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#00ffff",
+                    }}
+                  >
+                    BOT SPEED (Lv.{upgradeStatus?.bot_level || 0}/
+                    {upgradeStatus?.bot_max_level || 45})
+                  </h4>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Current: {itemsPerHour} items/hr
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    Cost: <BerryIcon size={10} />
+                    {costPerHour}/hr | Next: {itemsPerHour + 1} items/hr
+                  </p>
+                </div>
+
+                {/* Row 2: Level selector + Upgrade button + After balance */}
+                <div className="flex items-center justify-between mb-2">
+                  {/* Level Selector */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "bot",
+                          -1,
+                          upgradeStatus?.bot_level || 0,
+                          upgradeStatus?.bot_max_level || 45,
+                        )
+                      }
+                      disabled={bulkLevels.bot <= 1}
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
-                        color: "#00ffff",
+                        backgroundColor:
+                          bulkLevels.bot <= 1 ? "#222" : "#00ffff",
+                        color: bulkLevels.bot <= 1 ? "#444" : "#000",
                       }}
                     >
-                      BOT SPEED (Lv.{upgradeStatus?.bot_level || 0}/
-                      {upgradeStatus?.bot_max_level || 45})
-                    </h4>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Current: {itemsPerHour} items/hr
-                    </p>
-                    <p className="text-[9px] text-gray-500">
-                      Cost: <BerryIcon size={10} />
-                      {costPerHour}/hr | Next: {itemsPerHour + 1} items/hr
-                    </p>
-                    {economyState.token_balance >=
-                      (upgradeStatus?.bot_upgrade_cost || 100) && (
-                      <p className="text-[8px] text-green-400 mt-1">
-                        After: <BerryIcon size={8} />{" "}
-                        {economyState.token_balance -
-                          (upgradeStatus?.bot_upgrade_cost || 100)}
-                      </p>
-                    )}
+                      -
+                    </button>
+                    <div className="text-center min-w-[40px]">
+                      <span
+                        className="text-xs"
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          color: "#00ffff",
+                        }}
+                      >
+                        +{bulkLevels.bot}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "bot",
+                          1,
+                          upgradeStatus?.bot_level || 0,
+                          upgradeStatus?.bot_max_level || 45,
+                        )
+                      }
+                      disabled={
+                        (upgradeStatus?.bot_level || 0) + bulkLevels.bot >=
+                        (upgradeStatus?.bot_max_level || 45)
+                      }
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          (upgradeStatus?.bot_level || 0) + bulkLevels.bot >=
+                          (upgradeStatus?.bot_max_level || 45)
+                            ? "#222"
+                            : "#00ffff",
+                        color:
+                          (upgradeStatus?.bot_level || 0) + bulkLevels.bot >=
+                          (upgradeStatus?.bot_max_level || 45)
+                            ? "#444"
+                            : "#000",
+                      }}
+                    >
+                      +
+                    </button>
                   </div>
+
+                  {/* Upgrade Button */}
                   <button
-                    onClick={() => handleUpgrade("bot")}
+                    onClick={() => handleUpgrade("bot", bulkLevels.bot)}
                     disabled={
                       upgrading === "bot" ||
                       economyState.token_balance <
-                        (upgradeStatus?.bot_upgrade_cost || 100)
+                        calculateBulkCost(
+                          "bot",
+                          upgradeStatus?.bot_level || 0,
+                          bulkLevels.bot,
+                        )
                     }
-                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
+                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
                         economyState.token_balance <
-                        (upgradeStatus?.bot_upgrade_cost || 100)
+                        calculateBulkCost(
+                          "bot",
+                          upgradeStatus?.bot_level || 0,
+                          bulkLevels.bot,
+                        )
                           ? "#333"
                           : "#00ffff",
                       color:
                         economyState.token_balance <
-                        (upgradeStatus?.bot_upgrade_cost || 100)
+                        calculateBulkCost(
+                          "bot",
+                          upgradeStatus?.bot_level || 0,
+                          bulkLevels.bot,
+                        )
                           ? "#666"
                           : "#000",
                     }}
@@ -849,10 +974,34 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {upgradeStatus?.bot_upgrade_cost || 100}
+                        {calculateBulkCost(
+                          "bot",
+                          upgradeStatus?.bot_level || 0,
+                          bulkLevels.bot,
+                        )}
                       </>
                     )}
                   </button>
+
+                  {/* After Balance */}
+                  <div className="text-right">
+                    {economyState.token_balance >=
+                      calculateBulkCost(
+                        "bot",
+                        upgradeStatus?.bot_level || 0,
+                        bulkLevels.bot,
+                      ) && (
+                      <p className="text-[8px] text-green-400">
+                        After: <BerryIcon size={8} />{" "}
+                        {economyState.token_balance -
+                          calculateBulkCost(
+                            "bot",
+                            upgradeStatus?.bot_level || 0,
+                            bulkLevels.bot,
+                          )}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-2">
                   <div className="flex justify-between text-[8px] mb-1">
@@ -891,55 +1040,130 @@ export function HuntBotPanel() {
                   backgroundColor: "rgba(255, 0, 255, 0.05)",
                 }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4
-                      className="text-xs whitespace-nowrap"
+                {/* Row 1: Title and stats */}
+                <div className="mb-2">
+                  <h4
+                    className="text-xs whitespace-nowrap"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#ff00ff",
+                    }}
+                  >
+                    MAX RUNTIME (Lv.{upgradeStatus?.runtime_level || 0}/
+                    {upgradeStatus?.runtime_max_level || 100})
+                  </h4>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Current: {maxRuntime} min max
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    Base: 15 min | Max: 1440 min (24h)
+                  </p>
+                </div>
+
+                {/* Row 2: Level selector + Upgrade button + After balance */}
+                <div className="flex items-center justify-between mb-2">
+                  {/* Level Selector */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "runtime",
+                          -1,
+                          upgradeStatus?.runtime_level || 0,
+                          upgradeStatus?.runtime_max_level || 100,
+                        )
+                      }
+                      disabled={bulkLevels.runtime <= 1}
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
-                        color: "#ff00ff",
+                        backgroundColor:
+                          bulkLevels.runtime <= 1 ? "#222" : "#ff00ff",
+                        color: bulkLevels.runtime <= 1 ? "#444" : "#000",
                       }}
                     >
-                      MAX RUNTIME (Lv.{upgradeStatus?.runtime_level || 0}/
-                      {upgradeStatus?.runtime_max_level || 100})
-                    </h4>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Current: {maxRuntime} min max
-                    </p>
-                    <p className="text-[9px] text-gray-500">
-                      Base: 15 min | Max: 1440 min (24h)
-                    </p>
-                    {maxRuntime < 1440 &&
-                      economyState.token_balance >=
-                        (upgradeStatus?.runtime_upgrade_cost || 150) && (
-                        <p className="text-[8px] text-green-400 mt-1">
-                          After: <BerryIcon size={8} />{" "}
-                          {economyState.token_balance -
-                            (upgradeStatus?.runtime_upgrade_cost || 150)}
-                        </p>
-                      )}
+                      -
+                    </button>
+                    <div className="text-center min-w-[40px]">
+                      <span
+                        className="text-xs"
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          color: "#ff00ff",
+                        }}
+                      >
+                        +{bulkLevels.runtime}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "runtime",
+                          1,
+                          upgradeStatus?.runtime_level || 0,
+                          upgradeStatus?.runtime_max_level || 100,
+                        )
+                      }
+                      disabled={
+                        (upgradeStatus?.runtime_level || 0) +
+                          bulkLevels.runtime >=
+                        (upgradeStatus?.runtime_max_level || 100)
+                      }
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          (upgradeStatus?.runtime_level || 0) +
+                            bulkLevels.runtime >=
+                          (upgradeStatus?.runtime_max_level || 100)
+                            ? "#222"
+                            : "#ff00ff",
+                        color:
+                          (upgradeStatus?.runtime_level || 0) +
+                            bulkLevels.runtime >=
+                          (upgradeStatus?.runtime_max_level || 100)
+                            ? "#444"
+                            : "#000",
+                      }}
+                    >
+                      +
+                    </button>
                   </div>
+
+                  {/* Upgrade Button */}
                   <button
-                    onClick={() => handleUpgrade("runtime")}
+                    onClick={() => handleUpgrade("runtime", bulkLevels.runtime)}
                     disabled={
                       upgrading === "runtime" ||
                       maxRuntime >= 1440 ||
                       economyState.token_balance <
-                        (upgradeStatus?.runtime_upgrade_cost || 150)
+                        calculateBulkCost(
+                          "runtime",
+                          upgradeStatus?.runtime_level || 0,
+                          bulkLevels.runtime,
+                        )
                     }
-                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
+                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
                         maxRuntime >= 1440 ||
                         economyState.token_balance <
-                          (upgradeStatus?.runtime_upgrade_cost || 150)
+                          calculateBulkCost(
+                            "runtime",
+                            upgradeStatus?.runtime_level || 0,
+                            bulkLevels.runtime,
+                          )
                           ? "#333"
                           : "#ff00ff",
                       color:
                         maxRuntime >= 1440 ||
                         economyState.token_balance <
-                          (upgradeStatus?.runtime_upgrade_cost || 150)
+                          calculateBulkCost(
+                            "runtime",
+                            upgradeStatus?.runtime_level || 0,
+                            bulkLevels.runtime,
+                          )
                           ? "#666"
                           : "#000",
                     }}
@@ -951,10 +1175,35 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {upgradeStatus?.runtime_upgrade_cost || 150}
+                        {calculateBulkCost(
+                          "runtime",
+                          upgradeStatus?.runtime_level || 0,
+                          bulkLevels.runtime,
+                        )}
                       </>
                     )}
                   </button>
+
+                  {/* After Balance */}
+                  <div className="text-right">
+                    {maxRuntime < 1440 &&
+                      economyState.token_balance >=
+                        calculateBulkCost(
+                          "runtime",
+                          upgradeStatus?.runtime_level || 0,
+                          bulkLevels.runtime,
+                        ) && (
+                        <p className="text-[8px] text-green-400">
+                          After: <BerryIcon size={8} />{" "}
+                          {economyState.token_balance -
+                            calculateBulkCost(
+                              "runtime",
+                              upgradeStatus?.runtime_level || 0,
+                              bulkLevels.runtime,
+                            )}
+                        </p>
+                      )}
+                  </div>
                 </div>
                 <div className="mt-2">
                   <div className="flex justify-between text-[8px] mb-1">
@@ -993,55 +1242,133 @@ export function HuntBotPanel() {
                   backgroundColor: "rgba(255, 255, 0, 0.05)",
                 }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4
-                      className="text-xs whitespace-nowrap"
+                {/* Row 1: Title and stats */}
+                <div className="mb-2">
+                  <h4
+                    className="text-xs whitespace-nowrap"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#ffff00",
+                    }}
+                  >
+                    SATELLITE (Lv.{upgradeStatus?.satellite_level || 0}/
+                    {upgradeStatus?.satellite_max_level || 300})
+                  </h4>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Current: +
+                    {((upgradeStatus?.satellite_bonus_bp || 0) / 100).toFixed(
+                      2,
+                    )}
+                    % rare drops
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    Base: 0% | +0.1% per level
+                  </p>
+                </div>
+
+                {/* Row 2: Level selector + Upgrade button + After balance */}
+                <div className="flex items-center justify-between mb-2">
+                  {/* Level Selector */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "satellite",
+                          -1,
+                          upgradeStatus?.satellite_level || 0,
+                          upgradeStatus?.satellite_max_level || 300,
+                        )
+                      }
+                      disabled={bulkLevels.satellite <= 1}
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
-                        color: "#ffff00",
+                        backgroundColor:
+                          bulkLevels.satellite <= 1 ? "#222" : "#ffff00",
+                        color: bulkLevels.satellite <= 1 ? "#444" : "#000",
                       }}
                     >
-                      SATELLITE (Lv.{upgradeStatus?.satellite_level || 0}/
-                      {upgradeStatus?.satellite_max_level || 300})
-                    </h4>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Current: +
-                      {((upgradeStatus?.satellite_bonus_bp || 0) / 100).toFixed(
-                        2,
-                      )}
-                      % rare drops
-                    </p>
-                    <p className="text-[9px] text-gray-500">
-                      Base: 0% | +0.1% per level
-                    </p>
-                    {economyState.token_balance >=
-                      (upgradeStatus?.satellite_upgrade_cost || 500) && (
-                      <p className="text-[8px] text-green-400 mt-1">
-                        After: <BerryIcon size={8} />{" "}
-                        {economyState.token_balance -
-                          (upgradeStatus?.satellite_upgrade_cost || 500)}
-                      </p>
-                    )}
+                      -
+                    </button>
+                    <div className="text-center min-w-[40px]">
+                      <span
+                        className="text-xs"
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          color: "#ffff00",
+                        }}
+                      >
+                        +{bulkLevels.satellite}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "satellite",
+                          1,
+                          upgradeStatus?.satellite_level || 0,
+                          upgradeStatus?.satellite_max_level || 300,
+                        )
+                      }
+                      disabled={
+                        (upgradeStatus?.satellite_level || 0) +
+                          bulkLevels.satellite >=
+                        (upgradeStatus?.satellite_max_level || 300)
+                      }
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          (upgradeStatus?.satellite_level || 0) +
+                            bulkLevels.satellite >=
+                          (upgradeStatus?.satellite_max_level || 300)
+                            ? "#222"
+                            : "#ffff00",
+                        color:
+                          (upgradeStatus?.satellite_level || 0) +
+                            bulkLevels.satellite >=
+                          (upgradeStatus?.satellite_max_level || 300)
+                            ? "#444"
+                            : "#000",
+                      }}
+                    >
+                      +
+                    </button>
                   </div>
+
+                  {/* Upgrade Button */}
                   <button
-                    onClick={() => handleUpgrade("satellite")}
+                    onClick={() =>
+                      handleUpgrade("satellite", bulkLevels.satellite)
+                    }
                     disabled={
                       upgrading === "satellite" ||
                       economyState.token_balance <
-                        (upgradeStatus?.satellite_upgrade_cost || 500)
+                        calculateBulkCost(
+                          "satellite",
+                          upgradeStatus?.satellite_level || 0,
+                          bulkLevels.satellite,
+                        )
                     }
-                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
+                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
                         economyState.token_balance <
-                        (upgradeStatus?.satellite_upgrade_cost || 500)
+                        calculateBulkCost(
+                          "satellite",
+                          upgradeStatus?.satellite_level || 0,
+                          bulkLevels.satellite,
+                        )
                           ? "#333"
                           : "#ffff00",
                       color:
                         economyState.token_balance <
-                        (upgradeStatus?.satellite_upgrade_cost || 500)
+                        calculateBulkCost(
+                          "satellite",
+                          upgradeStatus?.satellite_level || 0,
+                          bulkLevels.satellite,
+                        )
                           ? "#666"
                           : "#000",
                     }}
@@ -1051,12 +1378,37 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {upgradeStatus?.satellite_upgrade_cost || 500}
+                        {calculateBulkCost(
+                          "satellite",
+                          upgradeStatus?.satellite_level || 0,
+                          bulkLevels.satellite,
+                        )}
                       </>
                     )}
                   </button>
+
+                  {/* After Balance */}
+                  <div className="text-right">
+                    {economyState.token_balance >=
+                      calculateBulkCost(
+                        "satellite",
+                        upgradeStatus?.satellite_level || 0,
+                        bulkLevels.satellite,
+                      ) && (
+                      <p className="text-[8px] text-green-400">
+                        After: <BerryIcon size={8} />{" "}
+                        {economyState.token_balance -
+                          calculateBulkCost(
+                            "satellite",
+                            upgradeStatus?.satellite_level || 0,
+                            bulkLevels.satellite,
+                          )}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
+                {/* Row 3: Progress bar */}
                 <div className="mt-2">
                   <div className="flex justify-between text-[8px] mb-1">
                     <span
@@ -1094,61 +1446,136 @@ export function HuntBotPanel() {
                   backgroundColor: "rgba(0, 255, 0, 0.05)",
                 }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4
-                      className="text-xs whitespace-nowrap"
+                {/* Row 1: Title and stats */}
+                <div className="mb-2">
+                  <h4
+                    className="text-xs whitespace-nowrap"
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#00ff00",
+                    }}
+                  >
+                    COST/HOUR (Lv.{upgradeStatus?.cost_per_hour_level || 0}/
+                    {upgradeStatus?.cost_per_hour_max_level || 100})
+                  </h4>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Current: {upgradeStatus?.cost_per_hour_current || 120}
+                    <BerryIcon size={10} />
+                    /hr
+                  </p>
+                  <p className="text-[9px] text-gray-500">
+                    Base: 120
+                    <BerryIcon size={10} />
+                    /hr | Min: 60
+                    <BerryIcon size={10} />
+                    /hr
+                  </p>
+                </div>
+
+                {/* Row 2: Level selector + Upgrade button + After balance */}
+                <div className="flex items-center justify-between mb-2">
+                  {/* Level Selector */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "cost",
+                          -1,
+                          upgradeStatus?.cost_per_hour_level || 0,
+                          upgradeStatus?.cost_per_hour_max_level || 100,
+                        )
+                      }
+                      disabled={bulkLevels.cost <= 1}
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
                       style={{
                         fontFamily: "'Press Start 2P', cursive",
-                        color: "#00ff00",
+                        backgroundColor:
+                          bulkLevels.cost <= 1 ? "#222" : "#00ff00",
+                        color: bulkLevels.cost <= 1 ? "#444" : "#000",
                       }}
                     >
-                      COST/HOUR (Lv.{upgradeStatus?.cost_per_hour_level || 0}/
-                      {upgradeStatus?.cost_per_hour_max_level || 100})
-                    </h4>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Current: {upgradeStatus?.cost_per_hour_current || 120}
-                      <BerryIcon size={10} />
-                      /hr
-                    </p>
-                    <p className="text-[9px] text-gray-500">
-                      Base: 120
-                      <BerryIcon size={10} />
-                      /hr | Min: 60
-                      <BerryIcon size={10} />
-                      /hr
-                    </p>
-                    {(upgradeStatus?.cost_per_hour_current || 120) > 60 &&
-                      economyState.token_balance >=
-                        (upgradeStatus?.cost_per_hour_upgrade_cost || 200) && (
-                        <p className="text-[8px] text-green-400 mt-1">
-                          After: <BerryIcon size={8} />{" "}
-                          {economyState.token_balance -
-                            (upgradeStatus?.cost_per_hour_upgrade_cost || 200)}
-                        </p>
-                      )}
+                      -
+                    </button>
+                    <div className="text-center min-w-[40px]">
+                      <span
+                        className="text-xs"
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          color: "#00ff00",
+                        }}
+                      >
+                        +{bulkLevels.cost}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() =>
+                        adjustBulkLevel(
+                          "cost",
+                          1,
+                          upgradeStatus?.cost_per_hour_level || 0,
+                          upgradeStatus?.cost_per_hour_max_level || 100,
+                        )
+                      }
+                      disabled={
+                        (upgradeStatus?.cost_per_hour_level || 0) +
+                          bulkLevels.cost >=
+                        (upgradeStatus?.cost_per_hour_max_level || 100)
+                      }
+                      className="w-6 h-6 rounded flex items-center justify-center text-xs"
+                      style={{
+                        fontFamily: "'Press Start 2P', cursive",
+                        backgroundColor:
+                          (upgradeStatus?.cost_per_hour_level || 0) +
+                            bulkLevels.cost >=
+                          (upgradeStatus?.cost_per_hour_max_level || 100)
+                            ? "#222"
+                            : "#00ff00",
+                        color:
+                          (upgradeStatus?.cost_per_hour_level || 0) +
+                            bulkLevels.cost >=
+                          (upgradeStatus?.cost_per_hour_max_level || 100)
+                            ? "#444"
+                            : "#000",
+                      }}
+                    >
+                      +
+                    </button>
                   </div>
+
+                  {/* Upgrade Button */}
                   <button
-                    onClick={() => handleUpgrade("cost")}
+                    onClick={() => handleUpgrade("cost", bulkLevels.cost)}
                     disabled={
                       upgrading === "cost" ||
                       (upgradeStatus?.cost_per_hour_current || 120) <= 60 ||
                       economyState.token_balance <
-                        (upgradeStatus?.cost_per_hour_upgrade_cost || 200)
+                        calculateBulkCost(
+                          "cost",
+                          upgradeStatus?.cost_per_hour_level || 0,
+                          bulkLevels.cost,
+                        )
                     }
-                    className="px-3 py-1 text-xs rounded whitespace-nowrap"
+                    className="px-2 py-1 text-xs rounded whitespace-nowrap"
                     style={{
                       fontFamily: "'Press Start 2P', cursive",
                       backgroundColor:
                         (upgradeStatus?.cost_per_hour_current || 120) <= 60 ||
                         economyState.token_balance <
-                          (upgradeStatus?.cost_per_hour_upgrade_cost || 200)
+                          calculateBulkCost(
+                            "cost",
+                            upgradeStatus?.cost_per_hour_level || 0,
+                            bulkLevels.cost,
+                          )
                           ? "#333"
                           : "#00ff00",
                       color:
                         (upgradeStatus?.cost_per_hour_current || 120) <= 60 ||
                         economyState.token_balance <
-                          (upgradeStatus?.cost_per_hour_upgrade_cost || 200)
+                          calculateBulkCost(
+                            "cost",
+                            upgradeStatus?.cost_per_hour_level || 0,
+                            bulkLevels.cost,
+                          )
                           ? "#666"
                           : "#000",
                     }}
@@ -1160,10 +1587,35 @@ export function HuntBotPanel() {
                     ) : (
                       <>
                         UPGRADE <BerryIcon size={10} />
-                        {upgradeStatus?.cost_per_hour_upgrade_cost || 200}
+                        {calculateBulkCost(
+                          "cost",
+                          upgradeStatus?.cost_per_hour_level || 0,
+                          bulkLevels.cost,
+                        )}
                       </>
                     )}
                   </button>
+
+                  {/* After Balance */}
+                  <div className="text-right">
+                    {(upgradeStatus?.cost_per_hour_current || 120) > 60 &&
+                      economyState.token_balance >=
+                        calculateBulkCost(
+                          "cost",
+                          upgradeStatus?.cost_per_hour_level || 0,
+                          bulkLevels.cost,
+                        ) && (
+                        <p className="text-[8px] text-green-400">
+                          After: <BerryIcon size={8} />{" "}
+                          {economyState.token_balance -
+                            calculateBulkCost(
+                              "cost",
+                              upgradeStatus?.cost_per_hour_level || 0,
+                              bulkLevels.cost,
+                            )}
+                        </p>
+                      )}
+                  </div>
                 </div>
                 <div className="mt-2">
                   <div className="flex justify-between text-[8px] mb-1">
