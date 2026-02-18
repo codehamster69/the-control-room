@@ -730,30 +730,115 @@ export function HuntBotPanel() {
                   +{collectResult.total_power_gained} POWER
                 </p>
 
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {collectResult.items_received.map((item, index) => (
-                    <div
-                      key={`${item.id}-${index}`}
-                      className="flex justify-between items-center p-2 rounded bg-black/30"
+                {/* Group items by rarity for card display */}
+                {(() => {
+                  // Group items by rarity
+                  const itemsByRarity = collectResult.items_received.reduce<
+                    Record<
+                      string,
+                      {
+                        id: string;
+                        name: string;
+                        rarity: string;
+                        score_value: number;
+                        count: number;
+                      }[]
                     >
-                      <span
-                        className="text-xs"
-                        style={{
-                          fontFamily: "'Press Start 2P', cursive",
-                          color: getRarityColor(item.rarity),
-                        }}
-                      >
-                        {item.name}
-                      </span>
-                      <span
-                        className="text-[10px] text-gray-400"
-                        style={{ fontFamily: "'Press Start 2P', cursive" }}
-                      >
-                        {item.rarity} | +{item.score_value} PWR
-                      </span>
+                  >((acc, item) => {
+                    const key = item.rarity;
+                    if (!acc[key]) acc[key] = [];
+                    const existing = acc[key].find((i) => i.id === item.id);
+                    if (existing) {
+                      existing.count++;
+                    } else {
+                      acc[key].push({ ...item, count: 1 });
+                    }
+                    return acc;
+                  }, {});
+
+                  // Order rarities from Mythic to Common
+                  const rarityOrder = [
+                    "Mythic",
+                    "Legendary",
+                    "Epic",
+                    "Rare",
+                    "Uncommon",
+                    "Common",
+                  ];
+
+                  return (
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {rarityOrder.map((rarity) => {
+                        const items = itemsByRarity[rarity];
+                        if (!items || items.length === 0) return null;
+
+                        return (
+                          <div key={rarity}>
+                            <div
+                              className="mb-2 px-2 py-1 rounded border text-[9px]"
+                              style={{
+                                fontFamily: "'Press Start 2P', cursive",
+                                borderColor: getRarityColor(rarity),
+                                backgroundColor: `${getRarityColor(rarity)}20`,
+                                color: getRarityColor(rarity),
+                              }}
+                            >
+                              {rarity} (
+                              {items.reduce((sum, i) => sum + i.count, 0)})
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="relative p-2 rounded border-2"
+                                  style={{
+                                    borderColor: getRarityColor(item.rarity),
+                                    backgroundColor: `${getRarityColor(item.rarity)}15`,
+                                    boxShadow: `0 0 8px ${getRarityColor(item.rarity)}40`,
+                                  }}
+                                >
+                                  {/* Quantity badge */}
+                                  {item.count > 1 && (
+                                    <div
+                                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold"
+                                      style={{
+                                        fontFamily: "'Press Start 2P', cursive",
+                                        backgroundColor: getRarityColor(
+                                          item.rarity,
+                                        ),
+                                        color: "#000",
+                                      }}
+                                    >
+                                      x{item.count}
+                                    </div>
+                                  )}
+                                  <div
+                                    className="text-[9px] text-center truncate"
+                                    style={{
+                                      fontFamily: "'Press Start 2P', cursive",
+                                      color: getRarityColor(item.rarity),
+                                    }}
+                                  >
+                                    {item.name}
+                                  </div>
+                                  <div
+                                    className="text-[7px] text-center mt-1"
+                                    style={{
+                                      fontFamily: "'Press Start 2P', cursive",
+                                      color: "#888",
+                                    }}
+                                  >
+                                    +{item.score_value} PWR
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 <button
                   onClick={() => setCollectResult(null)}
