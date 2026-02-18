@@ -1,7 +1,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import {
   createTransferIntent,
-  maskEmail,
   normalizeInstagramUsername,
 } from "@/lib/instagram/transfer-intent";
 import { type NextRequest, NextResponse } from "next/server";
@@ -258,7 +257,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this Instagram is already bound to a different account
-    const adminSupabase = await createAdminClient();
     const { data: existingBinding } = await adminSupabase
       .from("profiles")
       .select("id")
@@ -348,7 +346,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const adminSupabase = await createAdminClient();
 
     const { data: conflictingProfile, error: conflictingProfileError } = await adminSupabase
       .from("profiles")
