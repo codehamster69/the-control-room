@@ -1,9 +1,22 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import InstagramVerification from "@/components/instagram-verification-form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Item {
   id: string;
@@ -47,6 +60,11 @@ export default function ProfilePage() {
 
   const supabase = createClient();
   const [profile, setProfile] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showRelinkFlow, setShowRelinkFlow] = useState(false);
+  const [isDelinking, setIsDelinking] = useState(false);
+  const [delinkError, setDelinkError] = useState<string | null>(null);
+  const [delinkSuccess, setDelinkSuccess] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [huntBotStats, setHuntBotStats] = useState({
@@ -77,6 +95,8 @@ export default function ProfilePage() {
           return;
         }
 
+        setCurrentUserId(user.id);
+
         // Check if current user is verified
         const { data: currentProfile } = await supabase
           .from("profiles")
@@ -96,6 +116,7 @@ export default function ProfilePage() {
             `
             id, 
             instagram_username, 
+            instagram_avatar_url,
             avatar_url, 
             created_at,
             total_power,
@@ -219,6 +240,49 @@ export default function ProfilePage() {
     );
   }
 
+  const isProfileOwner = currentUserId === profileId;
+
+  const handleDelinkInstagram = async () => {
+    setIsDelinking(true);
+    setDelinkError(null);
+    setDelinkSuccess(null);
+
+    try {
+      const response = await fetch("/api/instagram/delink", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDelinkError(data.error || "Failed to delink Instagram account.");
+        return;
+      }
+
+      setProfile((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              instagram_username: null,
+              is_instagram_verified: false,
+              avatar_url:
+                prev.avatar_url && prev.avatar_url === prev.instagram_avatar_url
+                  ? null
+                  : prev.avatar_url,
+              instagram_avatar_url: null,
+            }
+          : prev,
+      );
+
+      setShowRelinkFlow(false);
+      setDelinkSuccess(data.message || "Instagram account delinked successfully.");
+    } catch (err) {
+      setDelinkError("Failed to delink Instagram account.");
+    } finally {
+      setIsDelinking(false);
+    }
+  };
+
   if (error || !profile) {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6">
@@ -339,6 +403,147 @@ export default function ProfilePage() {
           </a>
         )}
       </div>
+
+      {isProfileOwner && (
+        <div
+          className="mb-4 sm:mb-6 p-3 sm:p-4 rounded max-w-md mx-auto w-full"
+          style={{
+            backgroundColor: "rgba(0, 255, 255, 0.08)",
+            border: "2px solid #00ffff",
+          }}
+        >
+          <h3
+            className="text-xs sm:text-sm mb-3 text-center"
+            style={{
+              fontFamily: "'Press Start 2P', cursive",
+              color: "#00ffff",
+            }}
+          >
+            INSTAGRAM MANAGEMENT
+          </h3>
+
+          <div className="flex flex-col gap-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="w-full py-3 text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    fontFamily: "'Press Start 2P', cursive",
+                    backgroundColor: "rgba(255, 0, 255, 0.2)",
+                    border: "2px solid #ff00ff",
+                    color: "#ff00ff",
+                  }}
+                  disabled={!profile.instagram_username || isDelinking}
+                >
+                  {isDelinking ? "DELINKING..." : "Delink Instagram"}
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent
+                style={{
+                  backgroundColor: "#050505",
+                  border: "2px solid #ff00ff",
+                }}
+              >
+                <AlertDialogHeader>
+                  <AlertDialogTitle
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#ff00ff",
+                      fontSize: "0.8rem",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    Confirm delink?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      color: "#bfbfbf",
+                      fontSize: "0.65rem",
+                      lineHeight: "1.6",
+                    }}
+                  >
+                    This will remove your current Instagram connection from your profile.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-3 sm:gap-3">
+                  <AlertDialogCancel
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      fontSize: "0.65rem",
+                      minHeight: "44px",
+                    }}
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelinkInstagram}
+                    style={{
+                      fontFamily: "'Press Start 2P', cursive",
+                      fontSize: "0.65rem",
+                      minHeight: "44px",
+                      backgroundColor: "#ff00ff",
+                      color: "#050505",
+                    }}
+                  >
+                    Yes, delink
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <button
+              className="w-full py-3 text-xs sm:text-sm"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                backgroundColor: "rgba(0, 255, 255, 0.18)",
+                border: "2px solid #00ffff",
+                color: "#00ffff",
+              }}
+              onClick={() => {
+                setDelinkError(null);
+                setDelinkSuccess(null);
+                setShowRelinkFlow((prev) => !prev);
+              }}
+            >
+              {showRelinkFlow ? "Close relink flow" : "Link different Instagram"}
+            </button>
+
+            {delinkError && (
+              <Alert
+                variant="destructive"
+                className="bg-red-900/20 border-red-500/30"
+              >
+                <AlertDescription className="text-red-400 font-mono text-sm">
+                  {delinkError}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {delinkSuccess && (
+              <Alert className="bg-green-900/20 border-green-500/30">
+                <AlertDescription className="text-green-400 font-mono text-sm">
+                  {delinkSuccess}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {showRelinkFlow && (
+              <div className="pt-2">
+                <InstagramVerification
+                  allowRelink
+                  redirectOnSuccess={false}
+                  onVerified={() => {
+                    setShowRelinkFlow(false);
+                    setDelinkError(null);
+                    setDelinkSuccess("Instagram account linked successfully.");
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Power & Rank Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6 max-w-2xl mx-auto px-2">
