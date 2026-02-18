@@ -4,16 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  CheckCircle,
-  XCircle,
-  Instagram,
-  Gift,
-  Search,
-  Users,
-  LogOut,
-} from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -32,10 +23,7 @@ export default function HomePage() {
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,79 +76,10 @@ export default function HomePage() {
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setAuthError(null);
-
-    try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          setAuthError(error.message);
-        } else {
-          setAuthError(
-            "Check your email for the confirmation link! (Check spam/junk folder if not in inbox)",
-          );
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          if (
-            error.message.includes("Failed to fetch") ||
-            error.message.includes("network")
-          ) {
-            setAuthError(
-              "Unable to connect to authentication server. Please check your Supabase configuration.",
-            );
-          } else {
-            setAuthError(error.message);
-          }
-        } else {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          setUser(user);
-
-          // Get profile after login
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id, instagram_username, avatar_url, is_instagram_verified")
-            .eq("id", user?.id)
-            .single();
-          setProfile(profileData);
-        }
-      }
-    } catch (err: any) {
-      if (
-        err.message?.includes("Failed to fetch") ||
-        err.message?.includes("network")
-      ) {
-        setAuthError(
-          "Unable to connect to authentication server. Please check your Supabase configuration.",
-        );
-      } else {
-        setAuthError("An unexpected error occurred");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
-    setEmail("");
-    setPassword("");
     setShowAuth(false);
   };
 
@@ -753,7 +672,6 @@ export default function HomePage() {
           </Button>
         ) : (
           <>
-            {/* Google Sign-In Button */}
             <button
               onClick={handleGoogleAuth}
               disabled={isLoading}
@@ -778,67 +696,11 @@ export default function HomePage() {
               )}
             </button>
 
-            <div className="text-cyan-400 font-mono text-sm text-center">
-              OR
-            </div>
-
-            {/* Email/Password Auth Form */}
-            <form
-              onSubmit={handleEmailAuth}
-              className="w-full max-w-sm space-y-4"
-            >
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="EMAIL"
-                className="w-full px-4 py-3 bg-black/50 border border-pink-500/30 text-white font-mono placeholder:text-gray-600 focus:border-pink-500 focus:ring-pink-500/20 rounded"
-                required
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="PASSWORD"
-                className="w-full px-4 py-3 bg-black/50 border border-pink-500/30 text-white font-mono placeholder:text-gray-600 focus:border-pink-500 focus:ring-pink-500/20 rounded"
-                required
-                minLength={6}
-              />
-
-              {authError && (
-                <div className="text-red-400 font-mono text-xs text-center">
-                  {authError}
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full px-12 py-6 text-2xl"
-                style={{
-                  fontFamily: "'Press Start 2P', cursive",
-                  backgroundColor: "#ff00ff",
-                  color: "#050505",
-                }}
-              >
-                {isLoading
-                  ? "LOADING..."
-                  : isSignUp
-                    ? "SIGN UP"
-                    : "PRESS START"}
-              </Button>
-            </form>
-
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setAuthError(null);
-              }}
-              className="text-cyan-400 font-mono text-sm hover:text-cyan-300"
-            >
-              {isSignUp
-                ? "Already have an account? Sign in"
-                : "Need an account? Sign up"}
-            </button>
+            {authError && (
+              <div className="text-red-400 font-mono text-xs text-center">
+                {authError}
+              </div>
+            )}
 
             <button
               onClick={() => setShowAuth(false)}

@@ -1,4 +1,9 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import {
+  createTransferIntent,
+  maskEmail,
+  normalizeInstagramUsername,
+} from "@/lib/instagram/transfer-intent";
 import { type NextRequest, NextResponse } from "next/server";
 import { ApifyClient } from "apify-client";
 
@@ -243,6 +248,7 @@ export async function POST(request: NextRequest) {
     }
 
     const targetUsername = verification.instagram_username || instagram_username;
+    const normalizedUsername = normalizeInstagramUsername(targetUsername || "");
 
     if (!targetUsername) {
       return NextResponse.json(
@@ -342,6 +348,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const adminSupabase = await createAdminClient();
+
+    const { data: conflictingProfile, error: conflictingProfileError } = await adminSupabase
+      .from("profiles")
+      .select("id, instagram_username")
+      .neq("id", user.id)
+      .eq("is_instagram_verified", true)
+      .ilike("instagram_username", normalizedUsername)
+      .maybeSingle();
+
+    if (conflictingProfileError) {
+      console.error("Error checking instagram ownership conflict:", conflictingProfileError);
+      return NextResponse.json(
+        { error: "Failed to verify Instagram ownership conflict" },
+        { status: 500 }
+      );
+    }
+
+    if (conflictingProfile) {
+      const { data: oldOwnerUser, error: oldOwnerUserError } = await adminSupabase.auth.admin.getUserById(
+        conflictingProfile.id
+      );
+
+      if (oldOwnerUserError) {
+        console.error("Error loading old owner user for conflict response:", oldOwnerUserError);
+      }
+
+      const transferIntent = createTransferIntent({
+        newOwnerId: user.id,
+        oldOwnerId: conflictingProfile.id,
+        instagramUsername: normalizedUsername,
+        instagramAvatarUrl: scrapeResult.profilePicUrl,
+      });
+
+      return NextResponse.json(
+        {
+          error: "Instagram account is already bound to another profile",
+          alreadyBound: true,
+          oldOwner: {
+            emailMasked: maskEmail(oldOwnerUser?.user?.email),
+          },
+          oldOwnerProfileId: conflictingProfile.id,
+          transferIntent: {
+            token: transferIntent.token,
+            intentId: transferIntent.intentId,
+            expiresAt: transferIntent.expiresAt,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
     // Success! Update verification status
     try {
       await supabase
@@ -382,17 +440,36 @@ export async function POST(request: NextRequest) {
 
     // Update user profile with stored avatar URL
     try {
-      await supabase
+      const { error: updateProfileError } = await supabase
         .from("profiles")
         .update({
-          instagram_username: targetUsername,
+          instagram_username: normalizedUsername,
           instagram_avatar_url: finalAvatarUrl,
           is_instagram_verified: true,
           avatar_url: finalAvatarUrl
         })
         .eq("id", user.id);
+
+      if (updateProfileError) {
+        if (isUniqueViolation(updateProfileError)) {
+          return NextResponse.json(
+            {
+              error: "Instagram username was claimed concurrently. Please retry verification.",
+              alreadyBound: true,
+              raceConditionDetected: true,
+            },
+            { status: 409 }
+          );
+        }
+
+        throw updateProfileError;
+      }
     } catch (e) {
       console.error("Error updating profile:", e);
+      return NextResponse.json(
+        { error: "Failed to update profile with verified Instagram account" },
+        { status: 500 }
+      );
     }
 
     // Delete all verification entries for this user after successful verification
