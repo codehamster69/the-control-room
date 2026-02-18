@@ -42,6 +42,12 @@ interface InstagramConflictData {
   maskedEmail: string;
 }
 
+interface InstagramVerificationProps {
+  allowRelink?: boolean;
+  onVerified?: () => void;
+  redirectOnSuccess?: boolean;
+}
+
 // Constants
 const EXPIRY_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -82,9 +88,8 @@ export default function InstagramVerification({
   const [success, setSuccess] = useState<string | null>(null);
   const [instructions, setInstructions] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const [conflictData, setConflictData] = useState<InstagramConflictData | null>(
-    null,
-  );
+  const [conflictData, setConflictData] =
+    useState<InstagramConflictData | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
 
   // Calculate countdown directly from status (no need for separate state)
@@ -433,7 +438,7 @@ export default function InstagramVerification({
             <span className="font-mono">@{status.instagram_username}</span>
           </div>
           <p className="text-gray-400 text-sm font-mono">
-            Your Instagram account has been verified.
+            Refresh page to start collecting.
           </p>
         </CardContent>
       </Card>
@@ -458,7 +463,10 @@ export default function InstagramVerification({
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-300 font-mono text-sm leading-relaxed text-left">
               This Instagram is already bound to
-              <span className="text-cyan-400"> {conflictData?.maskedEmail}</span>
+              <span className="text-cyan-400">
+                {" "}
+                {conflictData?.maskedEmail}
+              </span>
               .
             </AlertDialogDescription>
             <AlertDialogDescription className="text-gray-400 font-mono text-xs text-left">
@@ -502,176 +510,176 @@ export default function InstagramVerification({
       <Card className="w-full max-w-md mx-auto bg-black/80 border-pink-500/30">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-1 animate-pulse">
-            <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
-              <Instagram className="w-8 h-8 text-pink-500" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-1 animate-pulse">
+              <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                <Instagram className="w-8 h-8 text-pink-500" />
+              </div>
             </div>
           </div>
-          </div>
           <CardTitle className="text-pink-500 font-mono text-xl">
-          CONNECT INSTAGRAM
+            CONNECT INSTAGRAM
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleGenerateCode} className="space-y-4">
-          {/* Username Input - Always Visible */}
-          <div className="space-y-2">
-            <label className="text-cyan-400 font-mono text-sm">
-              INSTAGRAM USERNAME
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-500 font-mono">
-                @
-              </span>
-              <Input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="your_username"
-                className="pl-8 bg-black/50 border-pink-500/30 text-white font-mono placeholder:text-gray-600 focus:border-pink-500 focus:ring-pink-500/20"
-                required
-              />
+            {/* Username Input - Always Visible */}
+            <div className="space-y-2">
+              <label className="text-cyan-400 font-mono text-sm">
+                INSTAGRAM USERNAME
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-500 font-mono">
+                  @
+                </span>
+                <Input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your_username"
+                  className="pl-8 bg-black/50 border-pink-500/30 text-white font-mono placeholder:text-gray-600 focus:border-pink-500 focus:ring-pink-500/20"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Verification Code Section - Shows after generation */}
-          {status?.verification ? (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-              {/* Code Display with Countdown */}
-              <div className="bg-black/50 border border-pink-500/30 rounded-lg p-4 text-center">
-                <p className="text-cyan-400 font-mono text-sm mb-2">
-                  YOUR VERIFICATION CODE
-                </p>
-                <div className="text-3xl font-bold text-white tracking-widest font-mono">
-                  {status.verification.code}
-                </div>
-                <div className="mt-2 text-sm font-mono">
-                  {countdown.isExpired ? (
-                    <span className="text-red-400">EXPIRED</span>
-                  ) : (
-                    <span className="text-gray-400">
-                      Expires in{" "}
-                      <span className="text-yellow-400">
-                        {countdown.minutes}:
-                        {countdown.seconds.toString().padStart(2, "0")}
+            {/* Verification Code Section - Shows after generation */}
+            {status?.verification ? (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* Code Display with Countdown */}
+                <div className="bg-black/50 border border-pink-500/30 rounded-lg p-4 text-center">
+                  <p className="text-cyan-400 font-mono text-sm mb-2">
+                    YOUR VERIFICATION CODE
+                  </p>
+                  <div className="text-3xl font-bold text-white tracking-widest font-mono">
+                    {status.verification.code}
+                  </div>
+                  <div className="mt-2 text-sm font-mono">
+                    {countdown.isExpired ? (
+                      <span className="text-red-400">EXPIRED</span>
+                    ) : (
+                      <span className="text-gray-400">
+                        Expires in{" "}
+                        <span className="text-yellow-400">
+                          {countdown.minutes}:
+                          {countdown.seconds.toString().padStart(2, "0")}
+                        </span>
                       </span>
-                    </span>
-                  )}
+                    )}
+                  </div>
                 </div>
+
+                {/* Instructions */}
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                  <p className="text-yellow-400 font-mono text-xs mb-2">
+                    ADD TO BIO:
+                  </p>
+                  <ol className="list-decimal list-inside text-gray-300 text-xs space-y-1 font-mono">
+                    <li>Open Instagram and go to your profile</li>
+                    <li>Tap "Edit Profile"</li>
+                    <li>Add the code above to your bio</li>
+                    <li>Save changes</li>
+                    <li>Click Verify button below</li>
+                  </ol>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleVerify}
+                    disabled={isVerifying}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-mono"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        VERIFY
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        VERIFY
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={handleGenerateCode}
+                    disabled={isGenerating || !countdown.isExpired}
+                    variant="outline"
+                    className="border-pink-500/30 text-pink-400 hover:bg-pink-500/10 font-mono"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {!countdown.isExpired && (
+                  <p className="text-xs text-gray-500 text-center font-mono">
+                    Can generate new code after {countdown.minutes}:
+                    {countdown.seconds.toString().padStart(2, "0")}
+                  </p>
+                )}
               </div>
-
-              {/* Instructions */}
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                <p className="text-yellow-400 font-mono text-xs mb-2">
-                  ADD TO BIO:
-                </p>
-                <ol className="list-decimal list-inside text-gray-300 text-xs space-y-1 font-mono">
-                  <li>Open Instagram and go to your profile</li>
-                  <li>Tap "Edit Profile"</li>
-                  <li>Add the code above to your bio</li>
-                  <li>Save changes</li>
-                  <li>Click Verify button below</li>
-                </ol>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={handleVerify}
-                  disabled={isVerifying}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-mono"
-                >
-                  {isVerifying ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      VERIFY
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      VERIFY
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={handleGenerateCode}
-                  disabled={isGenerating || !countdown.isExpired}
-                  variant="outline"
-                  className="border-pink-500/30 text-pink-400 hover:bg-pink-500/10 font-mono"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-
-              {!countdown.isExpired && (
-                <p className="text-xs text-gray-500 text-center font-mono">
-                  Can generate new code after {countdown.minutes}:
-                  {countdown.seconds.toString().padStart(2, "0")}
-                </p>
-              )}
-            </div>
-          ) : (
-            /* Generate Button - Shows when no code exists */
-            <Button
-              type="submit"
-              disabled={isGenerating || !username.trim()}
-              className="w-full bg-pink-600 hover:bg-pink-700 text-white font-mono"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  GENERATING...
-                </>
-              ) : (
-                <>GENERATE VERIFICATION CODE</>
-              )}
-            </Button>
-          )}
+            ) : (
+              /* Generate Button - Shows when no code exists */
+              <Button
+                type="submit"
+                disabled={isGenerating || !username.trim()}
+                className="w-full bg-pink-600 hover:bg-pink-700 text-white font-mono"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    GENERATING...
+                  </>
+                ) : (
+                  <>GENERATE VERIFICATION CODE</>
+                )}
+              </Button>
+            )}
           </form>
 
           {/* Error Alert */}
-        {error && (
-          <Alert
-            variant="destructive"
-            className="mt-4 bg-red-900/20 border-red-500/30"
-          >
-            <XCircle className="h-4 w-4" />
-            <AlertDescription className="text-red-400 font-mono text-sm">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
+          {error && (
+            <Alert
+              variant="destructive"
+              className="mt-4 bg-red-900/20 border-red-500/30"
+            >
+              <XCircle className="h-4 w-4" />
+              <AlertDescription className="text-red-400 font-mono text-sm">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Success Alert */}
-        {success && (
-          <Alert className="mt-4 bg-green-900/20 border-green-500/30">
-            <CheckCircle className="h-4 w-4 text-green-400" />
-            <AlertDescription className="text-green-400 font-mono text-sm">
-              {success}
-            </AlertDescription>
-          </Alert>
-        )}
+          {/* Success Alert */}
+          {success && (
+            <Alert className="mt-4 bg-green-900/20 border-green-500/30">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+              <AlertDescription className="text-green-400 font-mono text-sm">
+                {success}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Instructions */}
-        {instructions.length > 0 && (
-          <div className="mt-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
-            <p className="text-cyan-400 font-mono text-xs mb-2">
-              INSTRUCTIONS:
-            </p>
-            <ol className="list-decimal list-inside text-gray-300 text-xs space-y-1 font-mono">
-              {instructions.map((instruction, index) => (
-                <li key={index}>{instruction}</li>
-              ))}
-            </ol>
-          </div>
-        )}
+          {/* Instructions */}
+          {instructions.length > 0 && (
+            <div className="mt-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
+              <p className="text-cyan-400 font-mono text-xs mb-2">
+                INSTRUCTIONS:
+              </p>
+              <ol className="list-decimal list-inside text-gray-300 text-xs space-y-1 font-mono">
+                {instructions.map((instruction, index) => (
+                  <li key={index}>{instruction}</li>
+                ))}
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
     </>

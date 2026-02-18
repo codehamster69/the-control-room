@@ -155,10 +155,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const oldProfileAny = oldProfile as unknown as Record<string, unknown>;
     const transferredProgress = PROFILE_PROGRESS_FIELDS.reduce<
       Record<string, unknown>
-    >((acc, field) => {
-      acc[field] = oldProfile[field] ?? PROFILE_PROGRESS_RESET_VALUES[field];
+    >((acc, field: (typeof PROFILE_PROGRESS_FIELDS)[number]) => {
+      acc[field] = oldProfileAny[field] ?? PROFILE_PROGRESS_RESET_VALUES[field];
       return acc;
     }, {});
 
