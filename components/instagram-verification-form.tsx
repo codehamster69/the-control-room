@@ -8,6 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Loader2,
   CheckCircle,
   XCircle,
@@ -25,6 +35,11 @@ interface VerificationStatus {
     expires_in_minutes: number;
     expires_at: string;
   } | null;
+}
+
+interface InstagramConflictData {
+  alreadyBound: boolean;
+  maskedEmail: string;
 }
 
 // Constants
@@ -63,6 +78,10 @@ export default function InstagramVerification() {
   const [success, setSuccess] = useState<string | null>(null);
   const [instructions, setInstructions] = useState<string[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [conflictData, setConflictData] = useState<InstagramConflictData | null>(
+    null,
+  );
+  const [isTransfering, setIsTransfering] = useState(false);
 
   // Calculate countdown directly from status (no need for separate state)
   const countdown = (() => {
@@ -204,6 +223,7 @@ export default function InstagramVerification() {
     setIsGenerating(true);
     setError(null);
     setSuccess(null);
+    setConflictData(null);
     setInstructions([]);
 
     try {
@@ -303,6 +323,11 @@ export default function InstagramVerification() {
           ]);
         } else if (data.scrapingFailed) {
           setError(`${data.error} ${data.suggestion || ""}`);
+        } else if (response.status === 409 && data.alreadyBound) {
+          setConflictData({
+            alreadyBound: true,
+            maskedEmail: data.maskedEmail || "another email",
+          });
         } else {
           setError(data.error || "Verification failed");
         }
@@ -324,6 +349,38 @@ export default function InstagramVerification() {
       setError("Failed to verify. Please try again.");
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleTransferBinding = async () => {
+    setIsTransfering(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/instagram/transfer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instagram_username: username,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Transfer failed. Please try again.");
+        return;
+      }
+
+      setConflictData(null);
+      await handleVerify();
+    } catch (err) {
+      setError("Failed to transfer Instagram binding. Please try again.");
+    } finally {
+      setIsTransfering(false);
     }
   };
 
@@ -366,8 +423,65 @@ export default function InstagramVerification() {
 
   // Unified verification view - single window for both generate and verify
   return (
-    <Card className="w-full max-w-md mx-auto bg-black/80 border-pink-500/30">
-      <CardHeader className="text-center">
+    <>
+      <AlertDialog
+        open={Boolean(conflictData?.alreadyBound)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConflictData(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-md bg-black border-pink-500/30 text-white font-mono">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-pink-500 font-mono text-left">
+              INSTAGRAM ALREADY BOUND
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300 font-mono text-sm leading-relaxed text-left">
+              This Instagram is already bound to
+              <span className="text-cyan-400"> {conflictData?.maskedEmail}</span>
+              .
+            </AlertDialogDescription>
+            <AlertDialogDescription className="text-gray-400 font-mono text-xs text-left">
+              Confirm to delink it from the old account and link it to your
+              current account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isTransfering}
+              className="border-cyan-500/30 bg-transparent text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300 font-mono"
+              onClick={() => {
+                setError(
+                  "Please sign in with the previous email if you want to keep the current binding.",
+                );
+              }}
+            >
+              Keep Existing Link
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isTransfering}
+              onClick={(event) => {
+                event.preventDefault();
+                handleTransferBinding();
+              }}
+              className="bg-pink-600 hover:bg-pink-700 text-white font-mono"
+            >
+              {isTransfering ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  TRANSFERRING...
+                </>
+              ) : (
+                "Transfer & Link"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Card className="w-full max-w-md mx-auto bg-black/80 border-pink-500/30">
+        <CardHeader className="text-center">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-1 animate-pulse">
             <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
@@ -378,8 +492,8 @@ export default function InstagramVerification() {
         <CardTitle className="text-pink-500 font-mono text-xl">
           CONNECT INSTAGRAM
         </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </CardHeader>
+        <CardContent>
         <form onSubmit={handleGenerateCode} className="space-y-4">
           {/* Username Input - Always Visible */}
           <div className="space-y-2">
@@ -539,7 +653,8 @@ export default function InstagramVerification() {
             </ol>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   );
 }
