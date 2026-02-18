@@ -144,6 +144,17 @@ async function scrapeInstagramProfile(username: string): Promise<{
   }
 }
 
+function maskEmail(email: string): string {
+  const [localPart = "", domainPart = ""] = email.split("@");
+
+  if (!localPart || !domainPart) {
+    return "another email";
+  }
+
+  const visiblePrefix = localPart.slice(0, 2);
+  const hiddenLocal = "*".repeat(Math.max(localPart.length - 2, 1));
+
+  return `${visiblePrefix}${hiddenLocal}@${domainPart}`;
 
 function isUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -249,6 +260,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Instagram username not found" },
         { status: 400 }
+      );
+    }
+
+    // Check if this Instagram is already bound to a different account
+    const adminSupabase = await createAdminClient();
+    const { data: existingBinding } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("instagram_username", targetUsername)
+      .eq("is_instagram_verified", true)
+      .neq("id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingBinding?.id) {
+      const { data: existingAuthUser } = await adminSupabase.auth.admin.getUserById(
+        existingBinding.id,
+      );
+      const maskedEmail = existingAuthUser?.user?.email
+        ? maskEmail(existingAuthUser.user.email)
+        : "another email";
+
+      return NextResponse.json(
+        {
+          error: "Instagram account is already bound to another user",
+          alreadyBound: true,
+          maskedEmail,
+        },
+        { status: 409 },
       );
     }
 
