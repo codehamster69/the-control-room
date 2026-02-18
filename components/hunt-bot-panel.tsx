@@ -336,7 +336,7 @@ export function HuntBotPanel() {
   const isRunning =
     economyState.bot_running_until !== null &&
     economyState.bot_running_until > now;
-  const maxRuntime = upgradeStatus?.max_runtime_minutes || 15;
+  const maxRuntime = Math.ceil(upgradeStatus?.max_runtime_minutes || 15);
   const costPerHour = upgradeStatus?.bot_cost_per_hour || 120;
   const itemsPerHour = upgradeStatus?.bot_items_per_hour || 15;
 
@@ -1171,7 +1171,7 @@ export function HuntBotPanel() {
                     {upgradeStatus?.runtime_max_level || 100})
                   </h4>
                   <p className="text-[10px] text-gray-400 mt-1">
-                    Current: {maxRuntime} min max
+                    Current: {maxRuntime} min
                   </p>
                   <p className="text-[9px] text-gray-500">
                     Base: 15 min | Max: 1440 min (24h)
