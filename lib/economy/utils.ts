@@ -92,11 +92,18 @@ export function calculateItemsPerHour(level: number): number {
 
 /**
  * Calculate max runtime in minutes
- * Formula: min(1440, floor(BASE * (growth_rate ^ level)))
+ * Linear growth: 14 minutes per level to reach 1440 min (24 hours) at level 100
+ * Formula: min(1440, BASE_RUNTIME_MINUTES + (level * 14))
+ * Level 0: 15 min
+ * Level 1: 29 min (+14)
+ * Level 10: 155 min (+14 per level)
+ * Level 50: 715 min (+14 per level)
+ * Level 100: 1415 min (capped at 1440)
  */
 export function calculateMaxRuntimeMinutes(level: number): number {
-  const runtime = BASE_RUNTIME_MINUTES * Math.pow(RUNTIME_GROWTH_RATE, level);
-  return Math.min(MAX_RUNTIME_MINUTES, Math.ceil(runtime));
+  // Linear growth: 14 minutes per level
+  const runtime = BASE_RUNTIME_MINUTES + (level * 14.25);
+  return Math.min(MAX_RUNTIME_MINUTES, runtime);
 }
 
 /**
