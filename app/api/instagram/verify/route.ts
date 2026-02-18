@@ -142,6 +142,12 @@ async function scrapeInstagramProfile(username: string): Promise<{
     };
   }
 }
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  const message = (error as { message?: string }).message || "";
+  return code === "23505" || message.toLowerCase().includes("duplicate key");
+}
 
 function maskEmail(email: string): string {
   const [localPart = "", domainPart = ""] = email.split("@");
@@ -257,6 +263,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this Instagram is already bound to a different account
+    const adminSupabase = await createAdminClient();
     const { data: existingBinding } = await adminSupabase
       .from("profiles")
       .select("id")
@@ -384,7 +391,7 @@ export async function POST(request: NextRequest) {
           error: "Instagram account is already bound to another profile",
           alreadyBound: true,
           oldOwner: {
-            emailMasked: maskEmail(oldOwnerUser?.user?.email),
+            emailMasked: maskEmail(oldOwnerUser?.user?.email ?? ""),
           },
           oldOwnerProfileId: conflictingProfile.id,
           transferIntent: {
