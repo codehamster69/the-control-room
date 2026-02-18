@@ -346,7 +346,7 @@ export function HuntBotPanel() {
     (itemsPerHour / 60) * freeHuntRuntimeMinutes,
   );
 
-  const maxTokens = Math.floor((maxRuntime / 60) * costPerHour);
+  const maxTokens = Math.ceil((maxRuntime / 60) * costPerHour);
 
   const calculateRuntimeFromTokens = (tokens: number): number => {
     return Math.floor((tokens / costPerHour) * 60);
