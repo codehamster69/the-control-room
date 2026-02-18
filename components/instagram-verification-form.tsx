@@ -27,6 +27,12 @@ interface VerificationStatus {
   } | null;
 }
 
+interface InstagramVerificationProps {
+  allowRelink?: boolean;
+  onVerified?: () => void;
+  redirectOnSuccess?: boolean;
+}
+
 // Constants
 const EXPIRY_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -52,7 +58,11 @@ function clearStoredCreatedAt(): void {
   localStorage.removeItem(VERIFICATION_CREATED_AT_KEY);
 }
 
-export default function InstagramVerification() {
+export default function InstagramVerification({
+  allowRelink = false,
+  onVerified,
+  redirectOnSuccess = true,
+}: InstagramVerificationProps) {
   const router = useRouter();
   const supabase = createClient();
   const [status, setStatus] = useState<VerificationStatus | null>(null);
@@ -315,11 +325,17 @@ export default function InstagramVerification() {
       // Refresh status
       await checkStatus();
 
-      // Redirect to home page after a short delay to show success message
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 1500);
+      if (onVerified) {
+        onVerified();
+      }
+
+      if (redirectOnSuccess) {
+        // Redirect to home page after a short delay to show success message
+        setTimeout(() => {
+          router.push("/");
+          router.refresh();
+        }, 1500);
+      }
     } catch (err) {
       setError("Failed to verify. Please try again.");
     } finally {
@@ -328,7 +344,7 @@ export default function InstagramVerification() {
   };
 
   // Already verified view
-  if (status?.is_verified) {
+  if (status?.is_verified && !allowRelink) {
     return (
       <Card className="w-full max-w-md mx-auto bg-black/50 border-cyan-500/30">
         <CardHeader className="text-center">
