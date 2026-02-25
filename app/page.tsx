@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Users } from "lucide-react";
+import { BookOpen, Search, Users } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -131,6 +131,12 @@ export default function HomePage() {
           </h1>
 
           <div className="flex items-center gap-4">
+            <Link
+              href="/roadmap"
+              className="hidden sm:inline text-xs font-mono px-3 py-2 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+            >
+              ROADMAP
+            </Link>
             <Link
               href={`/profile/${user.id}`}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -353,6 +359,29 @@ export default function HomePage() {
             </h3>
             <p className="text-gray-400 font-mono text-[10px]">Join links</p>
           </Link>
+          <Link
+            href="/roadmap"
+            className="group p-4 md:p-6 border-2 hover:bg-[#1a1a2e] transition-all hover:scale-105 text-center col-span-2"
+            style={{
+              borderColor: "#ff00ff",
+              boxShadow: "0 0 10px rgba(255, 0, 255, 0.2)",
+            }}
+          >
+            <BookOpen className="w-10 h-10 mx-auto mb-3 text-fuchsia-400 group-hover:animate-bounce" />
+            <h3
+              className="font-bold mb-1"
+              style={{
+                fontFamily: "'Press Start 2P', cursive",
+                fontSize: "0.7rem",
+                color: "#ff00ff",
+              }}
+            >
+              ROADMAP
+            </h3>
+            <p className="text-gray-400 font-mono text-[10px]">
+              Learn how to play
+            </p>
+          </Link>
         </div>
 
         {/* Footer */}
@@ -480,6 +509,13 @@ export default function HomePage() {
         >
           ENTER THE GLITCH
         </p>
+        <Link
+          href="/roadmap"
+          className="text-xs font-mono px-4 py-2 border border-fuchsia-500/50 text-fuchsia-300 hover:bg-fuchsia-500/10 transition-colors"
+          style={{ fontFamily: "'Press Start 2P', cursive" }}
+        >
+          VIEW GAME ROADMAP
+        </Link>
 
         {/* App Description - Updated with Hunt Bot */}
         <div
